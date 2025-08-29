@@ -16,7 +16,7 @@ CASA_ALVO = 'bet365'
 
 ODD_MINIMA_UNDER = 1.80
 ODD_MINIMA_OVER = 1.80
-JOGOS_PARA_ANALISE = 4 # Mantido o valor ajustado para início de temporada
+JOGOS_PARA_ANALISE = 4
 JOGOS_H2H = 3
 
 try:
@@ -31,10 +31,8 @@ except FileNotFoundError:
 
 def enviar_alerta_telegram(mensagem):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return
-    # Esta função já faz o escape de todos os caracteres especiais necessários para o MarkdownV2
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in caracteres_especiais: mensagem = mensagem.replace(char, f'\\{char}')
-
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {'chat_id': TELEGRAM_CHAT_ID, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
     try:
@@ -46,7 +44,6 @@ def enviar_alerta_telegram(mensagem):
     except Exception as e:
         print(f"  > ERRO de conexão com o Telegram: {e}")
 
-# ... (O resto das funções auxiliares, de estratégia e verificação de pendentes permanecem exatamente iguais) ...
 def buscar_estatisticas_time(id_time, n_jogos):
     headers = {'x-apisports-key': API_KEY_FOOTBALL}
     url = "https://v3.football.api-sports.io/fixtures"
@@ -80,6 +77,8 @@ def encontrar_id_correto(nome_time, pista_liga, catalogo):
             return candidato['id']
     return None
 
+# --- 3. FUNÇÕES DAS ESTRATÉGIAS ---
+
 def analisar_fortaleza_defensiva(stats_casa, stats_fora, h2h):
     if stats_casa['gols_sofridos_media'] >= 0.8: return False
     if stats_casa['gols_marcados_media'] >= 1.5: return False
@@ -100,6 +99,8 @@ def analisar_tempestade_ofensiva(stats_casa, stats_fora, h2h):
         if (jogos_over / len(h2h)) < 0.5: return False
     return True
 
+# --- 4. FUNÇÃO DE VERIFICAÇÃO DE RESULTADOS (GREEN/RED) ---
+
 def verificar_apostas_pendentes():
     print("\n--- 🔍 Verificando resultados de apostas pendentes... ---")
     try:
@@ -110,7 +111,7 @@ def verificar_apostas_pendentes():
     if not apostas:
         print("Nenhuma aposta pendente encontrada.")
         return 0
-
+    
     apostas_finalizadas_ids = []
     url_scores = f"https://api.the-odds-api.com/v4/sports/soccer/scores/?apiKey={API_KEY_ODDS}&daysFrom=3"
     try:
@@ -132,18 +133,17 @@ def verificar_apostas_pendentes():
                     simbolo = "✅" if resultado == "GREEN" else "🔴"
                     mensagem = (f"*{simbolo} RESULTADO: {resultado} {simbolo}*\n"
                                 f"====================\n"
-                                f"*JOGO:* {aposta['nome_jogo']}*\n"
+                                f"*JOGO:* {aposta['nome_jogo']}\n"
                                 f"*PLACAR FINAL:* {placar_casa} x {placar_fora}\n"
                                 f"*SUA APOSTA:* {aposta['mercado']}")
                     enviar_alerta_telegram(mensagem)
                     apostas_finalizadas_ids.append(aposta['id_api'])
                 break
-
+    
     apostas_restantes = [ap for ap in apostas if ap['id_api'] not in apostas_finalizadas_ids]
     with open(ARQUIVO_PENDENTES, 'w') as f: json.dump(apostas_restantes, f, indent=4)
     print("--- Verificação de pendentes finalizada. ---")
     return len(apostas_restantes)
-
 
 # --- 5. FUNÇÃO PRINCIPAL DE ORQUESTRAÇÃO ---
 
@@ -154,10 +154,10 @@ def rodar_analise_completa():
 
     num_pendentes = verificar_apostas_pendentes()
     alerta_de_aposta_enviado = False
-
+    
     print("\n--- 🤖 Iniciando busca por novas oportunidades ---")
     fuso_horario_brasilia = timezone(timedelta(hours=-3))
-
+    
     url_jogos_dia = f"https://api.the-odds-api.com/v4/sports/soccer/odds?apiKey={API_KEY_ODDS}&regions=eu,us,uk,au&markets=h2h"
     try:
         response_jogos = requests.get(url_jogos_dia, timeout=20)
@@ -165,20 +165,20 @@ def rodar_analise_completa():
     except Exception as e:
         print(f"  > ERRO de conexão ao buscar jogos do dia: {e}")
         jogos_do_dia = []
-
+    
     jogos_analisados = 0
     if jogos_do_dia:
         for jogo in jogos_do_dia:
             time_casa_nome = jogo['home_team']
             time_fora_nome = jogo['away_team']
             pista_liga = jogo.get('sport_title', '')
-
+            
             id_time_casa = encontrar_id_correto(time_casa_nome, pista_liga, CATALOGO_TIMES)
             id_time_fora = encontrar_id_correto(time_fora_nome, pista_liga, CATALOGO_TIMES)
 
             if not id_time_casa or not id_time_fora:
                 continue
-
+            
             jogos_analisados += 1
             print(f"\nAnalisando {time_casa_nome} vs {time_fora_nome} (Liga: {pista_liga})...")
             stats_casa = buscar_estatisticas_time(id_time_casa, JOGOS_PARA_ANALISE)
@@ -191,7 +191,7 @@ def rodar_analise_completa():
                 continue
 
             mercado, odd_minima, emoji, nome_estrategia, outcome_name = (None,) * 5
-
+            
             if analisar_fortaleza_defensiva(stats_casa, stats_fora, h2h):
                 mercado, odd_minima, emoji, nome_estrategia, outcome_name = "Menos de 2.5", ODD_MINIMA_UNDER, "🎯", "FORTALEZA DEFENSIVA", "Under"
             elif analisar_tempestade_ofensiva(stats_casa, stats_fora, h2h):
@@ -209,7 +209,6 @@ def rodar_analise_completa():
                     if odd_encontrada and odd_encontrada > odd_minima:
                         alerta_de_aposta_enviado = True
                         data_hora_local = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).astimezone(fuso_horario_brasilia).strftime('%d/%m/%Y às %H:%M')
-                        # CORREÇÃO: Removido o '\' manual antes do '.'
                         alerta = (f"*{emoji} INSTRUÇÃO DE ENTRADA ({nome_estrategia}) {emoji}*\n\n"
                                   f"*⚽ JOGO:* {time_casa_nome} vs {time_fora_nome}\n"
                                   f"*🏆 LIGA:* {jogo.get('sport_title', 'Não informada')}\n"
@@ -235,7 +234,6 @@ def rodar_analise_completa():
     print("\n--- Análise deste ciclo finalizada. ---")
     if not alerta_de_aposta_enviado:
         data_hoje_str = datetime.now(fuso_horario_brasilia).strftime('%d/%m/%Y às %H:%M')
-        # CORREÇÃO: Removidos TODOS os '\' manuais. A função 'enviar_alerta_telegram' cuidará disso.
         mensagem_status = (f"🤖 *Relatório de Análise Automática*\n\n"
                            f"✅ Análise concluída em: {data_hoje_str}.\n\n"
                            f"🔍 *Resumo:*\n"
@@ -246,15 +244,15 @@ def rodar_analise_completa():
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
         enviar_alerta_telegram(mensagem_status)
 
-# --- 6. LOOP DE AUTOMAÇÃO ---
+# --- 6. PONTO DE ENTRADA (OTIMIZADO PARA GITHUB ACTIONS) ---
 if __name__ == "__main__":
+    print("--- Iniciando execução única do bot ---")
     if not all([API_KEY_ODDS, API_KEY_FOOTBALL, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Uma ou mais chaves de API não estão configuradas.")
     elif not CATALOGO_TIMES:
          print("❌ ERRO FATAL: 'catalogo_times.json' está vazio ou não foi encontrado.")
     else:
-        while True:
-            rodar_analise_completa()
-            tempo_de_espera_horas = 4
-            print(f"\n--- Bot em modo de espera por {tempo_de_espera_horas} horas. Próximo ciclo às {(datetime.now() + timedelta(hours=tempo_de_espera_horas)).strftime('%H:%M do dia %d/%m')}. ---")
-            time.sleep(tempo_de_espera_horas * 3600)
+        # Roda a análise apenas uma vez e termina. O GitHub vai chamar de novo em 4 horas.
+        rodar_analise_completa()
+    
+    print("--- Execução finalizada com sucesso. ---")
