@@ -1,0 +1,1708 @@
+{
+    "AEK": [
+        {
+            "id": 323,
+            "country": "Norway",
+            "name_api_football": "Stabaek"
+        },
+        {
+            "id": 575,
+            "country": "Greece",
+            "name_api_football": "AEK Athens FC"
+        },
+        {
+            "id": 614,
+            "country": "Cyprus",
+            "name_api_football": "AEK Larnaca"
+        },
+        {
+            "id": 7101,
+            "country": "South-Korea",
+            "name_api_football": "Pyeongtaek Citizen"
+        },
+        {
+            "id": 7944,
+            "country": "Greece",
+            "name_api_football": "AEK Athens U19"
+        },
+        {
+            "id": 18016,
+            "country": "Greece",
+            "name_api_football": "AEK Athens II"
+        },
+        {
+            "id": 22607,
+            "country": "England",
+            "name_api_football": "AEK Boco"
+        },
+        {
+            "id": 24282,
+            "country": "New Zealand",
+            "name_api_football": "Paekakariki"
+        },
+        {
+            "id": 26158,
+            "country": "intl",
+            "name_api_football": "AEK Athens W"
+        }
+    ],
+    "AFC Wimbledon": [
+        {
+            "id": 1333,
+            "country": "England",
+            "name_api_football": "AFC Wimbledon"
+        },
+        {
+            "id": 15435,
+            "country": "England",
+            "name_api_football": "AFC Wimbledon W"
+        },
+        {
+            "id": 23161,
+            "country": "England",
+            "name_api_football": "AFC Wimbledon U18"
+        }
+    ],
+    "AVS": [
+        {
+            "id": 6244,
+            "country": "Croatia",
+            "name_api_football": "Mladost Kl. Podravski"
+        },
+        {
+            "id": 6539,
+            "country": "Turkey",
+            "name_api_football": "Tavşanlı Linyitspor"
+        },
+        {
+            "id": 7346,
+            "country": "Czech-Republic",
+            "name_api_football": "Slovan Moravská Třebová"
+        },
+        {
+            "id": 10557,
+            "country": "Slovakia",
+            "name_api_football": "Rimavská Sobota"
+        },
+        {
+            "id": 12264,
+            "country": "Tajikistan",
+            "name_api_football": "Istaravshan"
+        },
+        {
+            "id": 12272,
+            "country": "Tajikistan",
+            "name_api_football": "Ravshan"
+        },
+        {
+            "id": 14089,
+            "country": "Slovakia",
+            "name_api_football": "Oravské Veselé"
+        },
+        {
+            "id": 15019,
+            "country": "Slovakia",
+            "name_api_football": "Oravská Poruba"
+        },
+        {
+            "id": 18724,
+            "country": "Tajikistan",
+            "name_api_football": "Ravshan Zafarobod"
+        },
+        {
+            "id": 18927,
+            "country": "Norway",
+            "name_api_football": "Ishavsbyen"
+        },
+        {
+            "id": 20168,
+            "country": "Slovenia",
+            "name_api_football": "Marjeta na Dravskem polj"
+        }
+    ],
+    "Accrington": [
+        {
+            "id": 1360,
+            "country": "England",
+            "name_api_football": "Accrington ST"
+        },
+        {
+            "id": 19875,
+            "country": "England",
+            "name_api_football": "Accrington Stanley Res."
+        },
+        {
+            "id": 25134,
+            "country": "England",
+            "name_api_football": "Accrington Stanley"
+        },
+        {
+            "id": 25423,
+            "country": "England",
+            "name_api_football": "Accrington Stanley U18"
+        }
+    ],
+    "Ajaccio": [
+        {
+            "id": 98,
+            "country": "France",
+            "name_api_football": "Ajaccio"
+        },
+        {
+            "id": 100,
+            "country": "France",
+            "name_api_football": "Gazelec FC Ajaccio"
+        },
+        {
+            "id": 9929,
+            "country": "France",
+            "name_api_football": "Ajaccio II"
+        }
+    ],
+    "Alanyaspor": [
+        {
+            "id": 996,
+            "country": "Turkey",
+            "name_api_football": "Alanyaspor"
+        }
+    ],
+    "Alaves": [
+        {
+            "id": 542,
+            "country": "Spain",
+            "name_api_football": "Alaves"
+        },
+        {
+            "id": 9582,
+            "country": "Spain",
+            "name_api_football": "Deportivo Alavés II"
+        },
+        {
+            "id": 17168,
+            "country": "Spain",
+            "name_api_football": "Deportivo Alavés"
+        },
+        {
+            "id": 22134,
+            "country": "Spain",
+            "name_api_football": "Deportivo Alavés III"
+        }
+    ],
+    "Albacete": [
+        {
+            "id": 722,
+            "country": "Spain",
+            "name_api_football": "Albacete"
+        },
+        {
+            "id": 1915,
+            "country": "Spain",
+            "name_api_football": "Fundacion Albacete W"
+        },
+        {
+            "id": 9895,
+            "country": "Spain",
+            "name_api_football": "Albacete II"
+        }
+    ],
+    "Alcorcon": [
+        {
+            "id": 711,
+            "country": "Spain",
+            "name_api_football": "Alcorcon"
+        },
+        {
+            "id": 9706,
+            "country": "Spain",
+            "name_api_football": "Alcorcón II"
+        }
+    ],
+    "Amiens": [
+        {
+            "id": 87,
+            "country": "France",
+            "name_api_football": "Amiens"
+        },
+        {
+            "id": 3215,
+            "country": "France",
+            "name_api_football": "Porto Portugais Amiens"
+        },
+        {
+            "id": 9251,
+            "country": "France",
+            "name_api_football": "Amiens AC"
+        },
+        {
+            "id": 9950,
+            "country": "France",
+            "name_api_football": "Amiens SC II"
+        },
+        {
+            "id": 22159,
+            "country": "Portugal",
+            "name_api_football": "Amiense"
+        }
+    ],
+    "Anderlecht": [
+        {
+            "id": 554,
+            "country": "Belgium",
+            "name_api_football": "Anderlecht"
+        },
+        {
+            "id": 1792,
+            "country": "Belgium",
+            "name_api_football": "Anderlecht W"
+        },
+        {
+            "id": 5743,
+            "country": "Belgium",
+            "name_api_football": "Anderlecht-Milan"
+        },
+        {
+            "id": 7948,
+            "country": "Belgium",
+            "name_api_football": "Anderlecht U19"
+        },
+        {
+            "id": 10844,
+            "country": "Belgium",
+            "name_api_football": "Anderlecht U21"
+        },
+        {
+            "id": 19046,
+            "country": "Belgium",
+            "name_api_football": "RSC Anderlecht II"
+        }
+    ],
+    "Annecy": [
+        {
+            "id": 3012,
+            "country": "France",
+            "name_api_football": "Annecy"
+        },
+        {
+            "id": 3013,
+            "country": "France",
+            "name_api_football": "Annecy-le-Vieux"
+        }
+    ],
+    "Antalyaspor": [
+        {
+            "id": 1005,
+            "country": "Turkey",
+            "name_api_football": "Antalyaspor"
+        }
+    ],
+    "Antwerp": [
+        {
+            "id": 740,
+            "country": "Belgium",
+            "name_api_football": "Antwerp"
+        },
+        {
+            "id": 5768,
+            "country": "Belgium",
+            "name_api_football": "City Pirates Antwerpen"
+        },
+        {
+            "id": 17476,
+            "country": "Belgium",
+            "name_api_football": "Antwerp U21"
+        },
+        {
+            "id": 19958,
+            "country": "Belgium",
+            "name_api_football": "Royal Antwerp II"
+        },
+        {
+            "id": 22370,
+            "country": null,
+            "name_api_football": "Antwerp U19"
+        }
+    ],
+    "Aris": [
+        {
+            "id": 85,
+            "country": "France",
+            "name_api_football": "Paris Saint Germain"
+        },
+        {
+            "id": 114,
+            "country": "France",
+            "name_api_football": "Paris FC"
+        },
+        {
+            "id": 953,
+            "country": "Greece",
+            "name_api_football": "Larisa"
+        },
+        {
+            "id": 1123,
+            "country": "Greece",
+            "name_api_football": "Aris Thessalonikis"
+        },
+        {
+            "id": 1667,
+            "country": "France",
+            "name_api_football": "Paris Saint Germain W"
+        },
+        {
+            "id": 1676,
+            "country": "France",
+            "name_api_football": "Paris FC W"
+        },
+        {
+            "id": 2101,
+            "country": "Greece",
+            "name_api_football": "Apollon Larissa FC"
+        },
+        {
+            "id": 3120,
+            "country": "France",
+            "name_api_football": "Stella Maris Douarnenez"
+        },
+        {
+            "id": 3227,
+            "country": "France",
+            "name_api_football": "Seyssinet-Pariset"
+        },
+        {
+            "id": 3283,
+            "country": "France",
+            "name_api_football": "Parisienne"
+        },
+        {
+            "id": 3408,
+            "country": "Cyprus",
+            "name_api_football": "Aris"
+        },
+        {
+            "id": 5031,
+            "country": "Greece",
+            "name_api_football": "Aris Avato"
+        },
+        {
+            "id": 5140,
+            "country": "Hungary",
+            "name_api_football": "Sárisápi Bányász"
+        },
+        {
+            "id": 8133,
+            "country": "Solomon-Islands",
+            "name_api_football": "Marist Fire"
+        },
+        {
+            "id": 9965,
+            "country": "France",
+            "name_api_football": "Paris II"
+        },
+        {
+            "id": 11845,
+            "country": "Hungary",
+            "name_api_football": "Sárisáp-Task"
+        },
+        {
+            "id": 12361,
+            "country": "Greece",
+            "name_api_football": "Antheias-Aristinou"
+        },
+        {
+            "id": 12369,
+            "country": "Greece",
+            "name_api_football": "Aris Palaiochori"
+        },
+        {
+            "id": 12383,
+            "country": "Greece",
+            "name_api_football": "Iraklis Larissa"
+        },
+        {
+            "id": 13399,
+            "country": "Turkey",
+            "name_api_football": "Hakkarispor"
+        },
+        {
+            "id": 13610,
+            "country": "France",
+            "name_api_football": "Maccabi Paris UJA"
+        },
+        {
+            "id": 15229,
+            "country": "Greece",
+            "name_api_football": "Asteras Varis"
+        },
+        {
+            "id": 15260,
+            "country": "Greece",
+            "name_api_football": "Aris Skalas"
+        },
+        {
+            "id": 15371,
+            "country": "Greece",
+            "name_api_football": "Aris Rethymnou"
+        },
+        {
+            "id": 15372,
+            "country": "Greece",
+            "name_api_football": "Aris Soudas"
+        },
+        {
+            "id": 15477,
+            "country": "Greece",
+            "name_api_football": "Aris Archangelou"
+        },
+        {
+            "id": 15703,
+            "country": "Bolivia",
+            "name_api_football": "Mariscal Sucre"
+        },
+        {
+            "id": 15883,
+            "country": "Luxembourg",
+            "name_api_football": "Marisca Mersch"
+        },
+        {
+            "id": 16898,
+            "country": "Slovakia",
+            "name_api_football": "Pivovar Veľký Šariš"
+        },
+        {
+            "id": 17189,
+            "country": "Paraguay",
+            "name_api_football": "Mariscal Estigarribia"
+        },
+        {
+            "id": 18075,
+            "country": "Peru",
+            "name_api_football": "Maristas"
+        },
+        {
+            "id": 18876,
+            "country": "Lithuania",
+            "name_api_football": "Sendvaris"
+        },
+        {
+            "id": 19406,
+            "country": "Slovakia",
+            "name_api_football": "Šarišské Dravce"
+        },
+        {
+            "id": 20045,
+            "country": "Greece",
+            "name_api_football": "Aris Petinos"
+        },
+        {
+            "id": 20046,
+            "country": "Greece",
+            "name_api_football": "Aris Voula"
+        },
+        {
+            "id": 20330,
+            "country": "Peru",
+            "name_api_football": "Mariscal Nieto"
+        },
+        {
+            "id": 20405,
+            "country": "Bermuda",
+            "name_api_football": "Hamilton Parish"
+        },
+        {
+            "id": 20567,
+            "country": "France",
+            "name_api_football": "AC Paris 15"
+        },
+        {
+            "id": 20676,
+            "country": "Greece",
+            "name_api_football": "Aris Petroupolis"
+        },
+        {
+            "id": 24283,
+            "country": "New Zealand",
+            "name_api_football": "Palmerston North Marist"
+        },
+        {
+            "id": 24319,
+            "country": "New Zealand",
+            "name_api_football": "Wellington Marist"
+        },
+        {
+            "id": 24865,
+            "country": "Greece",
+            "name_api_football": "Aris Piges"
+        },
+        {
+            "id": 24872,
+            "country": "Greece",
+            "name_api_football": "Aris Filiates"
+        }
+    ],
+    "Arouca": [
+        {
+            "id": 240,
+            "country": "Portugal",
+            "name_api_football": "Arouca"
+        }
+    ],
+    "Asteras Tripolis": [
+        {
+            "id": 955,
+            "country": "Greece",
+            "name_api_football": "Asteras Tripolis"
+        },
+        {
+            "id": 25017,
+            "country": "Greece",
+            "name_api_football": "Asteras Tripolis II"
+        },
+        {
+            "id": 25827,
+            "country": "intl",
+            "name_api_football": "Asteras Tripolis U18"
+        }
+    ],
+    "Atalanta": [
+        {
+            "id": 499,
+            "country": "Italy",
+            "name_api_football": "Atalanta"
+        },
+        {
+            "id": 7883,
+            "country": "Italy",
+            "name_api_football": "Atalanta U19"
+        },
+        {
+            "id": 22104,
+            "country": "Italy",
+            "name_api_football": "Atalanta II"
+        },
+        {
+            "id": 24725,
+            "country": "Italy",
+            "name_api_football": "Atalanta U20"
+        }
+    ],
+    "Atromitos": [
+        {
+            "id": 952,
+            "country": "Cyprus",
+            "name_api_football": "Atromitos Athinon"
+        },
+        {
+            "id": 6297,
+            "country": "Greece",
+            "name_api_football": "Atromitos Agios Georgios"
+        },
+        {
+            "id": 6298,
+            "country": "Greece",
+            "name_api_football": "Atromitos Patras"
+        },
+        {
+            "id": 12260,
+            "country": "Greece",
+            "name_api_football": "Atromitos"
+        },
+        {
+            "id": 12379,
+            "country": "Greece",
+            "name_api_football": "Atromitos Palamas"
+        },
+        {
+            "id": 15261,
+            "country": "Greece",
+            "name_api_football": "Atromitos Chiliomodi"
+        },
+        {
+            "id": 21143,
+            "country": null,
+            "name_api_football": "Atromitos U19"
+        },
+        {
+            "id": 22246,
+            "country": "Greece",
+            "name_api_football": "Atromitos Piraeus"
+        }
+    ],
+    "Avellino": [
+        {
+            "id": 528,
+            "country": "Italy",
+            "name_api_football": "Avellino"
+        },
+        {
+            "id": 23027,
+            "country": null,
+            "name_api_football": "Avellino U18"
+        },
+        {
+            "id": 24356,
+            "country": "Italy",
+            "name_api_football": "Avellino U19"
+        }
+    ],
+    "Barcelona B": [
+        {
+            "id": 712,
+            "country": "Spain",
+            "name_api_football": "Barcelona B"
+        },
+        {
+            "id": 15103,
+            "country": "Brazil",
+            "name_api_football": "Barcelona BA"
+        },
+        {
+            "id": 23276,
+            "country": "Brazil",
+            "name_api_football": "Barcelona BA U20"
+        }
+    ],
+    "Bari": [
+        {
+            "id": 508,
+            "country": "Italy",
+            "name_api_football": "Bari"
+        },
+        {
+            "id": 1884,
+            "country": "Italy",
+            "name_api_football": "Bari Pink W"
+        },
+        {
+            "id": 2453,
+            "country": "Indonesia",
+            "name_api_football": "Barito Putera"
+        },
+        {
+            "id": 2846,
+            "country": "Venezuela",
+            "name_api_football": "Potros De Barinas"
+        },
+        {
+            "id": 5628,
+            "country": "Bangladesh",
+            "name_api_football": "Baridhara"
+        },
+        {
+            "id": 10075,
+            "country": "Japan",
+            "name_api_football": "Imabari"
+        },
+        {
+            "id": 11999,
+            "country": "England",
+            "name_api_football": "London Bari"
+        },
+        {
+            "id": 13898,
+            "country": "Guatemala",
+            "name_api_football": "Barillas"
+        },
+        {
+            "id": 20700,
+            "country": "Algeria",
+            "name_api_football": "MB Barika"
+        },
+        {
+            "id": 22403,
+            "country": "Italy",
+            "name_api_football": "Bari U19"
+        },
+        {
+            "id": 22876,
+            "country": "Algeria",
+            "name_api_football": "AB Barika"
+        }
+    ],
+    "Barnet": [
+        {
+            "id": 1369,
+            "country": "England",
+            "name_api_football": "Barnet"
+        }
+    ],
+    "Barnsley": [
+        {
+            "id": 747,
+            "country": "England",
+            "name_api_football": "Barnsley"
+        },
+        {
+            "id": 15436,
+            "country": "England",
+            "name_api_football": "Barnsley W"
+        },
+        {
+            "id": 15639,
+            "country": "England",
+            "name_api_football": "Barnsley U23"
+        },
+        {
+            "id": 20091,
+            "country": "England",
+            "name_api_football": "Barnsley U21"
+        },
+        {
+            "id": 23163,
+            "country": "England",
+            "name_api_football": "Barnsley U18"
+        }
+    ],
+    "Barrow": [
+        {
+            "id": 1819,
+            "country": "England",
+            "name_api_football": "Barrow"
+        },
+        {
+            "id": 11946,
+            "country": "England",
+            "name_api_football": "Barrow Town"
+        },
+        {
+            "id": 22068,
+            "country": "England",
+            "name_api_football": "Barrow Res."
+        }
+    ],
+    "Bastia": [
+        {
+            "id": 1305,
+            "country": "France",
+            "name_api_football": "Bastia"
+        },
+        {
+            "id": 1312,
+            "country": "France",
+            "name_api_football": "CA Bastia"
+        },
+        {
+            "id": 3019,
+            "country": "France",
+            "name_api_football": "Bastia-Borgo"
+        },
+        {
+            "id": 9494,
+            "country": "Italy",
+            "name_api_football": "Bastia Calcio"
+        },
+        {
+            "id": 22037,
+            "country": "France",
+            "name_api_football": "Bastia II"
+        },
+        {
+            "id": 23708,
+            "country": "Brazil",
+            "name_api_football": "São Sebastião U20"
+        }
+    ],
+    "Benfica": [
+        {
+            "id": 211,
+            "country": "Portugal",
+            "name_api_football": "Benfica"
+        },
+        {
+            "id": 229,
+            "country": "Portugal",
+            "name_api_football": "Benfica B"
+        },
+        {
+            "id": 2031,
+            "country": "Luxembourg",
+            "name_api_football": "RM Hamm Benfica"
+        },
+        {
+            "id": 4731,
+            "country": "Portugal",
+            "name_api_football": "Benfica Castelo Branco"
+        },
+        {
+            "id": 4916,
+            "country": "Angola",
+            "name_api_football": "Benfica Lubango"
+        },
+        {
+            "id": 7888,
+            "country": "Portugal",
+            "name_api_football": "Benfica U19"
+        },
+        {
+            "id": 11141,
+            "country": "Andorra",
+            "name_api_football": "Casa Estrella de Benfica"
+        },
+        {
+            "id": 11149,
+            "country": "Angola",
+            "name_api_football": "Benfica Luanda"
+        },
+        {
+            "id": 15460,
+            "country": "Portugal",
+            "name_api_football": "Benfica U23"
+        },
+        {
+            "id": 15495,
+            "country": "Portugal",
+            "name_api_football": "SL Benfica"
+        },
+        {
+            "id": 17378,
+            "country": "Portugal",
+            "name_api_football": "Abrantes e Benfica"
+        },
+        {
+            "id": 17379,
+            "country": "Portugal",
+            "name_api_football": "Arronches e Benfica"
+        },
+        {
+            "id": 21201,
+            "country": "Macao",
+            "name_api_football": "Benfica"
+        },
+        {
+            "id": 22415,
+            "country": "Portugal",
+            "name_api_football": "Benfica U21"
+        },
+        {
+            "id": 22646,
+            "country": "England",
+            "name_api_football": "Sport London e Benfica"
+        },
+        {
+            "id": 24637,
+            "country": "Portugal",
+            "name_api_football": "CF Benfica"
+        }
+    ],
+    "Besiktas": [
+        {
+            "id": 549,
+            "country": "Turkey",
+            "name_api_football": "Besiktas"
+        },
+        {
+            "id": 7973,
+            "country": "USA",
+            "name_api_football": "Beşiktaş U19"
+        },
+        {
+            "id": 10912,
+            "country": null,
+            "name_api_football": "Beşiktaş W"
+        }
+    ],
+    "Betis": [
+        {
+            "id": 543,
+            "country": "Spain",
+            "name_api_football": "Real Betis"
+        },
+        {
+            "id": 1907,
+            "country": "Spain",
+            "name_api_football": "Real Betis W"
+        },
+        {
+            "id": 9765,
+            "country": "Spain",
+            "name_api_football": "Real Betis II"
+        },
+        {
+            "id": 18003,
+            "country": "Spain",
+            "name_api_football": "Betis de Hadú"
+        },
+        {
+            "id": 25195,
+            "country": "Eurocups",
+            "name_api_football": "Real Betis U19"
+        }
+    ],
+    "Birmingham": [
+        {
+            "id": 54,
+            "country": "England",
+            "name_api_football": "Birmingham"
+        },
+        {
+            "id": 1845,
+            "country": "England",
+            "name_api_football": "Birmingham City W"
+        },
+        {
+            "id": 3989,
+            "country": "USA",
+            "name_api_football": "Birmingham Legion"
+        },
+        {
+            "id": 15640,
+            "country": "England",
+            "name_api_football": "Birmingham City U23"
+        },
+        {
+            "id": 17425,
+            "country": "England",
+            "name_api_football": "Birmingham City U18"
+        },
+        {
+            "id": 20078,
+            "country": "England",
+            "name_api_football": "Birmingham City U21"
+        },
+        {
+            "id": 23111,
+            "country": "USA",
+            "name_api_football": "Birmingham Legion II"
+        },
+        {
+            "id": 23777,
+            "country": "USA",
+            "name_api_football": "FC Birmingham"
+        },
+        {
+            "id": 23933,
+            "country": "USA",
+            "name_api_football": "Birmingham Legion W"
+        }
+    ],
+    "Blackburn": [
+        {
+            "id": 67,
+            "country": "England",
+            "name_api_football": "Blackburn"
+        },
+        {
+            "id": 6730,
+            "country": "Scotland",
+            "name_api_football": "Blackburn United"
+        },
+        {
+            "id": 11916,
+            "country": "England",
+            "name_api_football": "Blackburn Rovers U23"
+        },
+        {
+            "id": 15375,
+            "country": "England",
+            "name_api_football": "Blackburn Rovers U18"
+        },
+        {
+            "id": 15401,
+            "country": "England",
+            "name_api_football": "Blackburn Rovers W"
+        },
+        {
+            "id": 18191,
+            "country": "England",
+            "name_api_football": "Blackburn Community"
+        },
+        {
+            "id": 19744,
+            "country": "England",
+            "name_api_football": "Blackburn Rovers U21"
+        }
+    ],
+    "Blackpool": [
+        {
+            "id": 1356,
+            "country": "England",
+            "name_api_football": "Blackpool"
+        },
+        {
+            "id": 5517,
+            "country": "Zambia",
+            "name_api_football": "Mufulira Blackpool"
+        },
+        {
+            "id": 11933,
+            "country": "England",
+            "name_api_football": "AFC Blackpool"
+        },
+        {
+            "id": 19876,
+            "country": "England",
+            "name_api_football": "Blackpool Res."
+        },
+        {
+            "id": 22613,
+            "country": "England",
+            "name_api_football": "Blackpool Ladies"
+        }
+    ],
+    "Boavista": [
+        {
+            "id": 222,
+            "country": "Portugal",
+            "name_api_football": "Boavista"
+        },
+        {
+            "id": 2206,
+            "country": "Brazil",
+            "name_api_football": "Boavista SC"
+        },
+        {
+            "id": 15461,
+            "country": "Portugal",
+            "name_api_football": "Boavista U23"
+        },
+        {
+            "id": 22509,
+            "country": "Portugal",
+            "name_api_football": "Boavista U19"
+        },
+        {
+            "id": 23386,
+            "country": "Brazil",
+            "name_api_football": "Boavista U20"
+        }
+    ],
+    "Bologna": [
+        {
+            "id": 500,
+            "country": "Italy",
+            "name_api_football": "Bologna"
+        },
+        {
+            "id": 15656,
+            "country": "Italy",
+            "name_api_football": "Bologna U19"
+        },
+        {
+            "id": 24726,
+            "country": "Italy",
+            "name_api_football": "Bologna U20"
+        },
+        {
+            "id": 25579,
+            "country": "Italy",
+            "name_api_football": "Bologna W"
+        }
+    ],
+    "Bolton": [
+        {
+            "id": 68,
+            "country": "England",
+            "name_api_football": "Bolton"
+        },
+        {
+            "id": 8058,
+            "country": "Mauritius",
+            "name_api_football": "Bolton City"
+        },
+        {
+            "id": 19877,
+            "country": "England",
+            "name_api_football": "Bolton Wanderers Res."
+        },
+        {
+            "id": 22614,
+            "country": "England",
+            "name_api_football": "Bolton Wanderers"
+        }
+    ],
+    "Bradford": [
+        {
+            "id": 1343,
+            "country": "England",
+            "name_api_football": "Bradford"
+        },
+        {
+            "id": 8651,
+            "country": "England",
+            "name_api_football": "Bradford (Park Avenue)"
+        },
+        {
+            "id": 8716,
+            "country": "England",
+            "name_api_football": "Bradford Town"
+        },
+        {
+            "id": 18193,
+            "country": "England",
+            "name_api_football": "Bradford City"
+        }
+    ],
+    "Bristol City": [
+        {
+            "id": 56,
+            "country": "England",
+            "name_api_football": "Bristol City"
+        },
+        {
+            "id": 1846,
+            "country": "England",
+            "name_api_football": "Bristol City W"
+        },
+        {
+            "id": 15641,
+            "country": "England",
+            "name_api_football": "Bristol City U23"
+        },
+        {
+            "id": 20080,
+            "country": "England",
+            "name_api_football": "Bristol City U21"
+        },
+        {
+            "id": 23165,
+            "country": "England",
+            "name_api_football": "Bristol City U18"
+        }
+    ],
+    "Bromley": [
+        {
+            "id": 1832,
+            "country": "England",
+            "name_api_football": "Bromley"
+        },
+        {
+            "id": 18228,
+            "country": "England",
+            "name_api_football": "Bromley W"
+        },
+        {
+            "id": 24846,
+            "country": "England",
+            "name_api_football": "Bromley U21"
+        }
+    ],
+    "Burton": [
+        {
+            "id": 748,
+            "country": "England",
+            "name_api_football": "Burton Albion"
+        },
+        {
+            "id": 14409,
+            "country": "England",
+            "name_api_football": "Burton Park Wanderers"
+        },
+        {
+            "id": 18229,
+            "country": "England",
+            "name_api_football": "Burton Albion W"
+        },
+        {
+            "id": 23166,
+            "country": "England",
+            "name_api_football": "Burton Albion U18"
+        }
+    ],
+    "Caen": [
+        {
+            "id": 88,
+            "country": "France",
+            "name_api_football": "Caen"
+        },
+        {
+            "id": 3007,
+            "country": "France",
+            "name_api_football": "AG Caennaise"
+        },
+        {
+            "id": 3158,
+            "country": "France",
+            "name_api_football": "Caen PTT"
+        },
+        {
+            "id": 9955,
+            "country": "France",
+            "name_api_football": "Caen II"
+        },
+        {
+            "id": 13116,
+            "country": "Brazil",
+            "name_api_football": "Serra Macaense"
+        },
+        {
+            "id": 21666,
+            "country": "Romania",
+            "name_api_football": "CSO Boldeşti-Scăeni"
+        }
+    ],
+    "Cagliari": [
+        {
+            "id": 490,
+            "country": "Italy",
+            "name_api_football": "Cagliari"
+        },
+        {
+            "id": 15658,
+            "country": "Italy",
+            "name_api_football": "Cagliari U19"
+        },
+        {
+            "id": 24727,
+            "country": "Italy",
+            "name_api_football": "Cagliari U20"
+        }
+    ],
+    "Cambridge": [
+        {
+            "id": 1370,
+            "country": "England",
+            "name_api_football": "Cambridge United"
+        },
+        {
+            "id": 7218,
+            "country": "England",
+            "name_api_football": "Cambridge City"
+        },
+        {
+            "id": 18230,
+            "country": "England",
+            "name_api_football": "Cambridge City W"
+        },
+        {
+            "id": 18231,
+            "country": "England",
+            "name_api_football": "Cambridge United W"
+        },
+        {
+            "id": 24238,
+            "country": "New Zealand",
+            "name_api_football": "Cambridge"
+        }
+    ],
+    "Cardiff": [
+        {
+            "id": 43,
+            "country": "Wales",
+            "name_api_football": "Cardiff"
+        },
+        {
+            "id": 353,
+            "country": "Wales",
+            "name_api_football": "Cardiff MET"
+        },
+        {
+            "id": 7585,
+            "country": "Wales",
+            "name_api_football": "Cardiff Corinthians"
+        },
+        {
+            "id": 7586,
+            "country": "Wales",
+            "name_api_football": "Cardiff Draconians"
+        },
+        {
+            "id": 10884,
+            "country": null,
+            "name_api_football": "Cardiff Metropolitan"
+        },
+        {
+            "id": 11194,
+            "country": "Australia",
+            "name_api_football": "South Cardiff"
+        },
+        {
+            "id": 11334,
+            "country": "Wales",
+            "name_api_football": "Cardiff Hibernian"
+        },
+        {
+            "id": 15412,
+            "country": "England",
+            "name_api_football": "Cardiff City W"
+        },
+        {
+            "id": 15642,
+            "country": "England",
+            "name_api_football": "Cardiff City U23"
+        },
+        {
+            "id": 17346,
+            "country": "Wales",
+            "name_api_football": "Cardiff Airport"
+        },
+        {
+            "id": 20016,
+            "country": "England",
+            "name_api_football": "Cardiff City U21"
+        },
+        {
+            "id": 23167,
+            "country": "England",
+            "name_api_football": "Cardiff City U18"
+        },
+        {
+            "id": 24942,
+            "country": "Wales",
+            "name_api_football": "Cardiff Bay Warriors"
+        }
+    ],
+    "Carrarese": [
+        {
+            "id": 1581,
+            "country": "Italy",
+            "name_api_football": "Carrarese"
+        },
+        {
+            "id": 18819,
+            "country": "Italy",
+            "name_api_football": "Carrarese U18"
+        }
+    ],
+    "Casa Pia": [
+        {
+            "id": 4716,
+            "country": "Portugal",
+            "name_api_football": "Casa Pia"
+        },
+        {
+            "id": 24442,
+            "country": "Portugal",
+            "name_api_football": "Casa Pia U19"
+        }
+    ],
+    "Catanzaro": [
+        {
+            "id": 1687,
+            "country": "Italy",
+            "name_api_football": "Catanzaro"
+        },
+        {
+            "id": 26373,
+            "country": "Italy",
+            "name_api_football": "Catanzaro U19"
+        }
+    ],
+    "Cercle Brugge": [
+        {
+            "id": 741,
+            "country": "Belgium",
+            "name_api_football": "Cercle Brugge"
+        },
+        {
+            "id": 17477,
+            "country": "Belgium",
+            "name_api_football": "Cercle Brugge U21"
+        },
+        {
+            "id": 19897,
+            "country": "Belgium",
+            "name_api_football": "Cercle Brugge II"
+        }
+    ],
+    "Cesena": [
+        {
+            "id": 509,
+            "country": "Italy",
+            "name_api_football": "Cesena"
+        },
+        {
+            "id": 17727,
+            "country": "Italy",
+            "name_api_football": "Cesena U19"
+        },
+        {
+            "id": 24728,
+            "country": "Italy",
+            "name_api_football": "Cesena U20"
+        },
+        {
+            "id": 25584,
+            "country": "Italy",
+            "name_api_football": "Cesena W"
+        }
+    ],
+    "Charleroi": [
+        {
+            "id": 736,
+            "country": "Belgium",
+            "name_api_football": "Charleroi"
+        },
+        {
+            "id": 6221,
+            "country": "Belgium",
+            "name_api_football": "Olympic Charleroi"
+        },
+        {
+            "id": 14036,
+            "country": "Belgium",
+            "name_api_football": "Charleroi W"
+        },
+        {
+            "id": 17478,
+            "country": "Belgium",
+            "name_api_football": "Sporting Charleroi U21"
+        },
+        {
+            "id": 19959,
+            "country": "Belgium",
+            "name_api_football": "Sporting Charleroi II"
+        }
+    ],
+    "Charlton": [
+        {
+            "id": 1335,
+            "country": "England",
+            "name_api_football": "Charlton"
+        },
+        {
+            "id": 15402,
+            "country": "England",
+            "name_api_football": "Charlton Athletic W"
+        },
+        {
+            "id": 15643,
+            "country": "England",
+            "name_api_football": "Charlton Athletic U23"
+        },
+        {
+            "id": 20082,
+            "country": "England",
+            "name_api_football": "Charlton Athletic U21"
+        },
+        {
+            "id": 22107,
+            "country": null,
+            "name_api_football": "Charlton U18"
+        },
+        {
+            "id": 23168,
+            "country": "England",
+            "name_api_football": "Charlton Athletic U18"
+        }
+    ],
+    "Cheltenham": [
+        {
+            "id": 1372,
+            "country": "England",
+            "name_api_football": "Cheltenham"
+        },
+        {
+            "id": 8739,
+            "country": "England",
+            "name_api_football": "Cheltenham Saracens"
+        },
+        {
+            "id": 15413,
+            "country": "England",
+            "name_api_football": "Cheltenham Town W"
+        },
+        {
+            "id": 23169,
+            "country": "England",
+            "name_api_football": "Cheltenham Town U18"
+        }
+    ],
+    "Chesterfield": [
+        {
+            "id": 1345,
+            "country": "England",
+            "name_api_football": "Chesterfield"
+        },
+        {
+            "id": 22670,
+            "country": "England",
+            "name_api_football": "Chesterfield W"
+        },
+        {
+            "id": 25408,
+            "country": "England",
+            "name_api_football": "Chesterfield U18"
+        }
+    ],
+    "Clermont": [
+        {
+            "id": 99,
+            "country": "France",
+            "name_api_football": "Clermont Foot"
+        },
+        {
+            "id": 9970,
+            "country": "France",
+            "name_api_football": "Clermont II"
+        },
+        {
+            "id": 13664,
+            "country": "France",
+            "name_api_football": "Racing Clermontois"
+        },
+        {
+            "id": 20575,
+            "country": "France",
+            "name_api_football": "Liancourt Clermont"
+        }
+    ],
+    "Club Brugge": [
+        {
+            "id": 569,
+            "country": "Belgium",
+            "name_api_football": "Club Brugge KV"
+        },
+        {
+            "id": 6344,
+            "country": "Belgium",
+            "name_api_football": "Club Brugge W"
+        },
+        {
+            "id": 7893,
+            "country": "Belgium",
+            "name_api_football": "Club Brugge U19"
+        },
+        {
+            "id": 10845,
+            "country": "Belgium",
+            "name_api_football": "Club Brugge U21"
+        },
+        {
+            "id": 14130,
+            "country": "Belgium",
+            "name_api_football": "Club Brugge II"
+        }
+    ],
+    "Colchester": [
+        {
+            "id": 1361,
+            "country": "England",
+            "name_api_football": "Colchester"
+        },
+        {
+            "id": 15644,
+            "country": "England",
+            "name_api_football": "Colchester United U23"
+        },
+        {
+            "id": 20083,
+            "country": "England",
+            "name_api_football": "Colchester United U21"
+        }
+    ],
+    "Como": [
+        {
+            "id": 895,
+            "country": "Italy",
+            "name_api_football": "Como"
+        },
+        {
+            "id": 1524,
+            "country": "Comoros",
+            "name_api_football": "Comoros"
+        },
+        {
+            "id": 1879,
+            "country": "Italy",
+            "name_api_football": "Como 2000 W"
+        },
+        {
+            "id": 3973,
+            "country": "Argentina",
+            "name_api_football": "Huracán de Comodoro"
+        },
+        {
+            "id": 3993,
+            "country": "USA",
+            "name_api_football": "El Paso Locomotive"
+        },
+        {
+            "id": 6419,
+            "country": "Comoros",
+            "name_api_football": "Fomboni Club"
+        },
+        {
+            "id": 8091,
+            "country": "Comoros",
+            "name_api_football": "Ngazi Club"
+        },
+        {
+            "id": 15568,
+            "country": "Comoros",
+            "name_api_football": "Zilimadjou"
+        },
+        {
+            "id": 16196,
+            "country": "Comoros",
+            "name_api_football": "Comoros U20"
+        },
+        {
+            "id": 17728,
+            "country": "Italy",
+            "name_api_football": "Como U19"
+        },
+        {
+            "id": 19747,
+            "country": "Italy",
+            "name_api_football": "Como W"
+        },
+        {
+            "id": 20805,
+            "country": "Comoros",
+            "name_api_football": "Comoros W"
+        },
+        {
+            "id": 22007,
+            "country": "Comoros",
+            "name_api_football": "Djabal Club"
+        },
+        {
+            "id": 24436,
+            "country": "Comoros",
+            "name_api_football": "Alize Fort"
+        },
+        {
+            "id": 25180,
+            "country": "Burkina Faso",
+            "name_api_football": "Comoé"
+        }
+    ],
+    "Coventry": [
+        {
+            "id": 1346,
+            "country": "England",
+            "name_api_football": "Coventry"
+        },
+        {
+            "id": 8754,
+            "country": "England",
+            "name_api_football": "Coventry Sphinx"
+        },
+        {
+            "id": 8755,
+            "country": "England",
+            "name_api_football": "Coventry United"
+        },
+        {
+            "id": 15408,
+            "country": "England",
+            "name_api_football": "Coventry United W"
+        },
+        {
+            "id": 15645,
+            "country": "England",
+            "name_api_football": "Coventry City U23"
+        },
+        {
+            "id": 20092,
+            "country": "England",
+            "name_api_football": "Coventry City U21"
+        },
+        {
+            "id": 20616,
+            "country": "England",
+            "name_api_football": "Coventry Sphinx W"
+        },
+        {
+            "id": 23170,
+            "country": "England",
+            "name_api_football": "Coventry City U18"
+        }
+    ],
+    "Crawley Town": [
+        {
+            "id": 1362,
+            "country": "England",
+            "name_api_football": "Crawley Town"
+        }
+    ]
+}
