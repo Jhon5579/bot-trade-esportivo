@@ -99,17 +99,23 @@ def analisar_tempestade_ofensiva(stats_casa, stats_fora, h2h):
         if (jogos_over / len(h2h)) < 0.5: return False
     return True
 
-# --- 4. FUNÇÃO DE VERIFICAÇÃO DE RESULTADOS (GREEN/RED) ---
+# --- 4. FUNÇÃO DE VERIFICAÇÃO (CORRIGIDA PARA SEMPRE CRIAR O ARQUIVO) ---
 
 def verificar_apostas_pendentes():
     print("\n--- 🔍 Verificando resultados de apostas pendentes... ---")
     try:
-        with open(ARQUIVO_PENDENTES, 'r') as f: apostas = json.load(f)
+        with open(ARQUIVO_PENDENTES, 'r', encoding='utf-8') as f:
+            apostas = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        print("Nenhuma aposta pendente encontrada.")
-        return 0
+        print("Nenhuma aposta pendente encontrada. Criando arquivo pela primeira vez.")
+        # Se o arquivo não existe, nós o criamos aqui com uma lista vazia
+        with open(ARQUIVO_PENDENTES, 'w', encoding='utf-8') as f:
+            json.dump([], f)
+        apostas = [] # Começamos com uma lista vazia
+    
     if not apostas:
-        print("Nenhuma aposta pendente encontrada.")
+        print("Nenhuma aposta pendente na lista.")
+        # Retornamos 0 pendentes, mas agora o arquivo sempre existe
         return 0
     
     apostas_finalizadas_ids = []
@@ -141,7 +147,7 @@ def verificar_apostas_pendentes():
                 break
     
     apostas_restantes = [ap for ap in apostas if ap['id_api'] not in apostas_finalizadas_ids]
-    with open(ARQUIVO_PENDENTES, 'w') as f: json.dump(apostas_restantes, f, indent=4)
+    with open(ARQUIVO_PENDENTES, 'w', encoding='utf-8') as f: json.dump(apostas_restantes, f, indent=4)
     print("--- Verificação de pendentes finalizada. ---")
     return len(apostas_restantes)
 
@@ -252,7 +258,6 @@ if __name__ == "__main__":
     elif not CATALOGO_TIMES:
          print("❌ ERRO FATAL: 'catalogo_times.json' está vazio ou não foi encontrado.")
     else:
-        # Roda a análise apenas uma vez e termina. O GitHub vai chamar de novo em 4 horas.
         rodar_analise_completa()
     
     print("--- Execução finalizada com sucesso. ---")
