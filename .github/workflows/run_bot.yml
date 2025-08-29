@@ -5,6 +5,10 @@ on:
     - cron: '0 */4 * * *'
   workflow_dispatch:
 
+# MUDANÇA IMPORTANTE: Adicionando permissões de escrita para o robô
+permissions:
+  contents: write
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
