@@ -3003,5 +3003,61 @@
             "country": "Italy",
             "name_api_football": "Sampdoria"
         }
+    ],
+    "1. FC Köln": [
+        {
+            "id": 192,
+            "country": "Germany",
+            "name_api_football": "1.FC Köln"
+        }
+    ],
+    "Alemannia Aachen": [
+        {
+            "id": 4259,
+            "country": "Germany",
+            "name_api_football": "Alemannia Aachen"
+        }
+    ],
+    "Aston Villa": [
+        {
+            "id": 22805,
+            "country": "Antigua-and-Barbuda",
+            "name_api_football": "Aston Villa"
+        }
+    ],
+    "Boca Juniors": [
+        {
+            "id": 451,
+            "country": "Argentina",
+            "name_api_football": "Boca Juniors"
+        }
+    ],
+    "Crystal Palace": [
+        {
+            "id": 52,
+            "country": "England",
+            "name_api_football": "Crystal Palace"
+        }
+    ],
+    "Genk": [
+        {
+            "id": 742,
+            "country": "Belgium",
+            "name_api_football": "Genk"
+        }
+    ],
+    "Rot-Weiss Essen": [
+        {
+            "id": 1621,
+            "country": "Germany",
+            "name_api_football": "Rot-Weiß Essen"
+        }
+    ],
+    "SC Freiburg": [
+        {
+            "id": 160,
+            "country": "Germany",
+            "name_api_football": "SC Freiburg"
+        }
     ]
 }
