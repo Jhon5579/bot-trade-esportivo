@@ -3402,5 +3402,19 @@
             "country": "Chile",
             "name_api_football": "Nublense"
         }
+    ],
+    "Fortaleza": [
+        {
+            "id": 15719,
+            "country": "Colombia",
+            "name_api_football": "Fortaleza"
+        }
+    ],
+    "Internacional": [
+        {
+            "id": 119,
+            "country": "Brazil",
+            "name_api_football": "Internacional"
+        }
     ]
 }
