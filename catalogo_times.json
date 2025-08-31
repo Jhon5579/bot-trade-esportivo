@@ -3416,5 +3416,68 @@
             "country": "Brazil",
             "name_api_football": "Internacional"
         }
+    ],
+    "Atlético Tucuman": [
+        {
+            "id": 455,
+            "country": "Argentina",
+            "name_api_football": "Atletico Tucuman"
+        }
+    ],
+    "Chapecoense": [
+        {
+            "id": 22722,
+            "country": "Brazil",
+            "name_api_football": "Chapecoense B"
+        }
+    ],
+    "Gimnasia La Plata": [
+        {
+            "id": 18686,
+            "country": "Argentina",
+            "name_api_football": "Gimnasia La Plata Res."
+        }
+    ],
+    "Necaxa": [
+        {
+            "id": 11686,
+            "country": "Honduras",
+            "name_api_football": "Necaxa"
+        }
+    ],
+    "Racing Club": [
+        {
+            "id": 436,
+            "country": "Argentina",
+            "name_api_football": "Racing Club"
+        }
+    ],
+    "Sport Recife": [
+        {
+            "id": 123,
+            "country": "Brazil",
+            "name_api_football": "Sport Recife"
+        }
+    ],
+    "Union Santa Fe": [
+        {
+            "id": 441,
+            "country": "Argentina",
+            "name_api_football": "Union Santa Fe"
+        }
+    ],
+    "Vasco da Gama": [
+        {
+            "id": 133,
+            "country": "Brazil",
+            "name_api_football": "Vasco DA Gama"
+        }
+    ],
+    "Vila Nova": [
+        {
+            "id": 142,
+            "country": "Brazil",
+            "name_api_football": "Vila Nova"
+        }
     ]
 }
