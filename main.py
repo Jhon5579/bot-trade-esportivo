@@ -36,7 +36,7 @@ def analisar_ataque_do_favorito(jogo):
                     if outcome.get('name') == jogo['home_team']: odd_casa = outcome.get('price')
                     elif outcome.get('name') == jogo['away_team']: odd_fora = outcome.get('price')
     except IndexError: return None
-    
+
     favorito_encontrado = (odd_casa and odd_casa <= FAVORITO_MAX_ODD) or \
                          (odd_fora and odd_fora <= FAVORITO_MAX_ODD)
 
@@ -169,7 +169,7 @@ def rodar_analise_completa():
     num_pendentes = verificar_apostas_pendentes()
     alerta_de_aposta_enviado_geral = False
     print(f"\n--- 🤖 Iniciando busca v5.0 (Estrategista de Odds)... ---")
-    
+
     url_jogos_e_odds = (f"https://api.the-odds-api.com/v4/sports/soccer/odds?"
                         f"apiKey={API_KEY_ODDS}&regions=eu,us,uk,au"
                         f"&markets=h2h,totals&bookmakers={CASA_ALVO}&oddsFormat=decimal")
@@ -178,14 +178,14 @@ def rodar_analise_completa():
         jogos_do_dia = response_jogos.json() if response_jogos.status_code == 200 else []
     except Exception as e:
         print(f"  > ERRO de conexão: {e}"); jogos_do_dia = []
-    
+
     jogos_analisados = 0
     if jogos_do_dia:
         fuso_brasilia = timezone(timedelta(hours=-3))
         for jogo in jogos_do_dia:
             time_casa_nome = jogo['home_team']; time_fora_nome = jogo['away_team']
             if not jogo.get('bookmakers'): continue
-            
+
             jogos_analisados += 1
             print(f"\n--------------------------------------------------")
             print(f"Analisando Jogo: {time_casa_nome} vs {time_fora_nome}")
@@ -197,7 +197,7 @@ def rodar_analise_completa():
 
             resultado2 = analisar_duelo_tatico(jogo)
             if resultado2: oportunidades_encontradas.append(resultado2)
-            
+
             resultado3 = analisar_mercado_otimista(jogo)
             if resultado3: oportunidades_encontradas.append(resultado3)
 
@@ -220,7 +220,7 @@ def rodar_analise_completa():
                     except (FileNotFoundError, json.JSONDecodeError): apostas_salvas = []
                     apostas_salvas.append(nova_aposta)
                     with open(ARQUIVO_PENDENTES, 'w', encoding='utf-8') as f: json.dump(apostas_salvas, f, indent=4)
-    
+
     print("\n--- Análise deste ciclo finalizada. ---")
     if not alerta_de_aposta_enviado_geral:
         fuso_brasilia = timezone(timedelta(hours=-3)); data_hoje_str = datetime.now(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
