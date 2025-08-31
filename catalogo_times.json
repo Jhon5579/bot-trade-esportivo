@@ -2800,5 +2800,103 @@
             "country": "Japan",
             "name_api_football": "Nagoya Grampus"
         }
+    ],
+    "1. FC Kaiserslautern": [
+        {
+            "id": 745,
+            "country": "Germany",
+            "name_api_football": "1. FC Kaiserslautern"
+        }
+    ],
+    "1. FC Magdeburg": [
+        {
+            "id": 179,
+            "country": "Germany",
+            "name_api_football": "1. FC Magdeburg"
+        }
+    ],
+    "Dynamo Dresden": [
+        {
+            "id": 183,
+            "country": "Germany",
+            "name_api_football": "Dynamo Dresden"
+        }
+    ],
+    "FC Schalke 04": [
+        {
+            "id": 174,
+            "country": "Germany",
+            "name_api_football": "FC Schalke 04"
+        }
+    ],
+    "Gamba Osaka": [
+        {
+            "id": 293,
+            "country": "Japan",
+            "name_api_football": "Gamba Osaka"
+        }
+    ],
+    "Gent": [
+        {
+            "id": 631,
+            "country": "Belgium",
+            "name_api_football": "Gent"
+        }
+    ],
+    "Greuther Fürth": [
+        {
+            "id": 9328,
+            "country": "Germany",
+            "name_api_football": "Greuther Fürth II"
+        }
+    ],
+    "Rangers": [
+        {
+            "id": 10007,
+            "country": "Congo-DR",
+            "name_api_football": "Rangers"
+        }
+    ],
+    "SSV Ulm 1846": [
+        {
+            "id": 1652,
+            "country": "Germany",
+            "name_api_football": "SSV Ulm 1846"
+        }
+    ],
+    "SV Darmstadt 98": [
+        {
+            "id": 181,
+            "country": "Germany",
+            "name_api_football": "SV Darmstadt 98"
+        }
+    ],
+    "Shanghai Shenhua FC": [
+        {
+            "id": 833,
+            "country": "China",
+            "name_api_football": "Shanghai Shenhua"
+        }
+    ],
+    "Shonan Bellmare": [
+        {
+            "id": 284,
+            "country": "Japan",
+            "name_api_football": "Shonan Bellmare"
+        }
+    ],
+    "Waldhof Mannheim": [
+        {
+            "id": 4268,
+            "country": "Germany",
+            "name_api_football": "Waldhof Mannheim"
+        }
+    ],
+    "Wuhan Three Towns": [
+        {
+            "id": 5695,
+            "country": "China",
+            "name_api_football": "Wuhan Three Towns"
+        }
     ]
 }
