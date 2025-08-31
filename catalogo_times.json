@@ -3059,5 +3059,68 @@
             "country": "Germany",
             "name_api_football": "SC Freiburg"
         }
+    ],
+    "AEK Athens": [
+        {
+            "id": 575,
+            "country": "Greece",
+            "name_api_football": "AEK Athens FC"
+        }
+    ],
+    "AS Monaco": [
+        {
+            "id": 91,
+            "country": "France",
+            "name_api_football": "Monaco"
+        }
+    ],
+    "Atromitos Athens": [
+        {
+            "id": 952,
+            "country": "Cyprus",
+            "name_api_football": "Atromitos Athinon"
+        }
+    ],
+    "Brondby IF": [
+        {
+            "id": 407,
+            "country": "Denmark",
+            "name_api_football": "Brondby"
+        }
+    ],
+    "FC Midtjylland": [
+        {
+            "id": 397,
+            "country": "Denmark",
+            "name_api_football": "FC Midtjylland"
+        }
+    ],
+    "HamKam": [
+        {
+            "id": 2080,
+            "country": "Finland",
+            "name_api_football": "Haka"
+        }
+    ],
+    "PAOK Thessaloniki": [
+        {
+            "id": 1123,
+            "country": "Greece",
+            "name_api_football": "Aris Thessalonikis"
+        }
+    ],
+    "SV Zulte-Waregem": [
+        {
+            "id": 14035,
+            "country": "Belgium",
+            "name_api_football": "Zulte-Waregem W"
+        }
+    ],
+    "Südtirol": [
+        {
+            "id": 1578,
+            "country": "Italy",
+            "name_api_football": "Sudtirol"
+        }
     ]
 }
