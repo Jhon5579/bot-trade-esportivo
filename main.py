@@ -3,19 +3,19 @@ import requests
 import json
 from datetime import datetime, timezone, timedelta
 import time
+import pandas as pd
 from csv import writer
 
 # --- 1. CONFIGURAÇÕES GERAIS ---
 API_KEY_ODDS = os.environ.get('API_KEY')
-API_KEY_FOOTBALL = os.environ.get('API_FOOTBALL_KEY')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
 ARQUIVO_PENDENTES = 'apostas_pendentes.json'
 ARQUIVO_CATALOGO = 'catalogo_times.json'
-# NOVOS ARQUIVOS DE LOG
+ARQUIVO_CSV_HISTORICO = 'dados_historicos_corrigido.csv'
 ARQUIVO_HISTORICO_APOSTAS = 'historico_de_apostas.json'
-ARQUIVO_HISTORICO_ANALISES = 'historico_de_analises.csv'
+ARQUIVO_HISTORICO_ANALISES = 'historico_de_analises.csv' # Log de análises
 CASA_ALVO = 'pinnacle'
 
 # CONFIGURAÇÕES DAS ESTRATÉGIAS
@@ -31,62 +31,61 @@ try:
 except FileNotFoundError:
     print(f"❌ ERRO: Arquivo '{ARQUIVO_CATALOGO}' não foi encontrado."); CATALOGO_TIMES = {}
 
-# --- 2. FUNÇÕES DE BUSCA DE DADOS (ONLINE) E ESTRATÉGIAS ---
+# CARREGAMENTO DO BANCO DE DADOS OFFLINE
+print(f"--- 📊 Carregando banco de dados de '{ARQUIVO_CSV_HISTORICO}'... ---")
+df_historico = None
+try:
+    df_historico = pd.read_csv(ARQUIVO_CSV_HISTORICO, encoding='utf-8')
+    if 'Date' in df_historico.columns:
+        df_historico['Date'] = pd.to_datetime(df_historico['Date'], dayfirst=True, errors='coerce')
+    print(f"✅ Banco de dados com {len(df_historico)} jogos carregado com sucesso.")
+except FileNotFoundError:
+    print(f"❌ ERRO FATAL: O arquivo '{ARQUIVO_CSV_HISTORICO}' não foi encontrado."); df_historico = None
 
-def buscar_estatisticas_time(id_time, n_jogos):
-    headers = {'x-apisports-key': API_KEY_FOOTBALL}
-    url = "https://v3.football.api-sports.io/fixtures"
-    params = {'team': id_time, 'last': n_jogos, 'status': 'FT'}
+# --- 2. FUNÇÕES DE ANÁLISE OFFLINE (USANDO O CSV) ---
+def buscar_estatisticas_do_csv(nome_time, df, n_jogos):
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=20)
-        if response.status_code != 200: return None
-        dados = response.json().get('response', [])
-        if len(dados) < n_jogos: return None
-        gols_marcados = sum(jogo['goals']['home'] if jogo['teams']['home']['id'] == id_time else jogo['goals']['away'] for jogo in dados)
-        gols_sofridos = sum(jogo['goals']['away'] if jogo['teams']['home']['id'] == id_time else jogo['goals']['home'] for jogo in dados)
-        return {'gols_marcados_media': gols_marcados / len(dados), 'gols_sofridos_media': gols_sofridos / len(dados)}
+        jogos_do_time = df[(df['HomeTeam'] == nome_time) | (df['AwayTeam'] == nome_time)].copy()
+        jogos_do_time = jogos_do_time.sort_values(by='Date', ascending=False)
+        ultimos_jogos = jogos_do_time.head(n_jogos)
+        if len(ultimos_jogos) < n_jogos: return None
+        gols_marcados, gols_sofridos = 0, 0
+        for index, jogo in ultimos_jogos.iterrows():
+            if jogo['HomeTeam'] == nome_time: gols_marcados += jogo['FTHG']; gols_sofridos += jogo['FTAG']
+            else: gols_marcados += jogo['FTAG']; gols_sofridos += jogo['FTHG']
+        return {'gols_marcados_media': gols_marcados / n_jogos, 'gols_sofridos_media': gols_sofridos / n_jogos}
     except Exception: return None
 
-def buscar_h2h(id_time_casa, id_time_fora, n_jogos):
-    headers = {'x-apisports-key': API_KEY_FOOTBALL}
-    url = "https://v3.football.api-sports.io/fixtures"
-    params = {'h2h': f'{id_time_casa}-{id_time_fora}', 'last': n_jogos, 'status': 'FT'}
+def buscar_h2h_do_csv(time_casa, time_fora, df, n_jogos):
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=20)
-        if response.status_code != 200: return None
-        return response.json().get('response', [])
+        h2h_jogos = df[((df['HomeTeam'] == time_casa) & (df['AwayTeam'] == time_fora)) | ((df['HomeTeam'] == time_fora) & (df['AwayTeam'] == time_casa))].copy()
+        h2h_jogos = h2h_jogos.sort_values(by='Date', ascending=False)
+        ultimos_h2h = h2h_jogos.head(n_jogos)
+        return [{'goals': {'home': jogo['FTHG'], 'away': jogo['FTAG']}} for index, jogo in ultimos_h2h.iterrows()]
     except Exception: return None
 
-def encontrar_id_correto(nome_time, pista_liga, catalogo):
-    candidatos = catalogo.get(nome_time, [])
-    if not candidatos: return None
-    if len(candidatos) == 1: return candidatos[0]['id']
-    for candidato in candidatos:
-        if candidato['country'] in pista_liga: return candidato['id']
-    return None
-
+# --- 3. FUNÇÕES DAS ESTRATÉGIAS (COM CRITÉRIOS CALIBRADOS) ---
 def analisar_fortaleza_defensiva(stats_casa, stats_fora, h2h):
-    if stats_casa['gols_sofridos_media'] >= 1.0: return False
-    if stats_casa['gols_marcados_media'] >= 1.6: return False
-    if stats_fora['gols_sofridos_media'] >= 1.4: return False
-    if stats_fora['gols_marcados_media'] >= 1.6: return False
+    if stats_casa['gols_sofridos_media'] >= 1.2: return False
+    if stats_casa['gols_marcados_media'] >= 1.7: return False
+    if stats_fora['gols_sofridos_media'] >= 1.5: return False
+    if stats_fora['gols_marcados_media'] >= 1.7: return False
     if h2h and len(h2h) >= JOGOS_H2H:
         jogos_under = sum(1 for jogo in h2h if (jogo['goals']['home'] + jogo['goals']['away']) < 2.5)
         if (jogos_under / len(h2h)) < 0.5: return False
     return True
 
 def analisar_tempestade_ofensiva(stats_casa, stats_fora, h2h):
-    if stats_casa['gols_marcados_media'] < 1.7: return False
-    if stats_fora['gols_marcados_media'] < 1.5: return False
-    if stats_casa['gols_sofridos_media'] < 1.0: return False
-    if stats_fora['gols_sofridos_media'] < 1.1: return False
+    if stats_casa['gols_marcados_media'] < 1.6: return False
+    if stats_fora['gols_marcados_media'] < 1.4: return False
+    if stats_casa['gols_sofridos_media'] < 0.9: return False
+    if stats_fora['gols_sofridos_media'] < 1.0: return False
     if h2h and len(h2h) >= JOGOS_H2H:
         jogos_over = sum(1 for jogo in h2h if (jogo['goals']['home'] + jogo['goals']['away']) > 2.5)
         if (jogos_over / len(h2h)) < 0.5: return False
     return True
 
-# --- 3. FUNÇÕES DE SUPORTE E LOGGING ---
-
+# --- 4. FUNÇÕES DE SUPORTE E LOGGING ---
 def enviar_alerta_telegram(mensagem):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
@@ -100,7 +99,6 @@ def enviar_alerta_telegram(mensagem):
     except Exception as e: print(f"  > ERRO de conexão com o Telegram: {e}")
 
 def salvar_aposta_concluida(aposta, resultado, placar_str):
-    """Salva a aposta finalizada no arquivo de histórico JSON."""
     try:
         with open(ARQUIVO_HISTORICO_APOSTAS, 'r', encoding='utf-8') as f:
             historico = json.load(f)
@@ -115,29 +113,7 @@ def salvar_aposta_concluida(aposta, resultado, placar_str):
         json.dump(historico, f, indent=4)
     print(f"  > Aposta '{aposta['nome_jogo']}' salva no histórico com resultado {resultado}.")
 
-def salvar_log_analise(jogo, stats_casa, stats_fora, resultado_estrategia):
-    """Salva a análise estatística em um arquivo CSV."""
-    stats_casa = stats_casa or {}; stats_fora = stats_fora or {}
-    data_log = [
-        datetime.now(timezone.utc).isoformat(), jogo['home_team'], jogo['away_team'],
-        jogo.get('sport_title', ''), stats_casa.get('gols_marcados_media', ''),
-        stats_casa.get('gols_sofridos_media', ''), stats_fora.get('gols_marcados_media', ''),
-        stats_fora.get('gols_sofridos_media', ''), resultado_estrategia ]
-    try:
-        if not os.path.exists(ARQUIVO_HISTORICO_ANALISES):
-            with open(ARQUIVO_HISTORICO_ANALISES, 'w', newline='', encoding='utf-8') as f:
-                csv_writer = writer(f)
-                header = ['timestamp', 'home_team', 'away_team', 'league', 'home_avg_goals_for', 
-                          'home_avg_goals_against', 'away_avg_goals_for', 'away_avg_goals_against', 'strategy_result']
-                csv_writer.writerow(header)
-        with open(ARQUIVO_HISTORICO_ANALISES, 'a', newline='', encoding='utf-8') as f:
-            csv_writer = writer(f)
-            csv_writer.writerow(data_log)
-    except Exception as e:
-        print(f"  > ERRO ao salvar log de análise: {e}")
-
 def verificar_apostas_pendentes():
-    """ATUALIZADO: Agora salva os resultados no histórico."""
     print("\n--- 🔍 Verificando resultados de apostas pendentes... ---")
     try:
         with open(ARQUIVO_PENDENTES, 'r', encoding='utf-8') as f: apostas = json.load(f)
@@ -145,7 +121,7 @@ def verificar_apostas_pendentes():
         with open(ARQUIVO_PENDENTES, 'w', encoding='utf-8') as f: json.dump([], f)
         apostas = []
     if not apostas:
-        print("Nenhuma aposta pendente na lista."); return len(apostas)
+        print("Nenhuma aposta pendente na lista."); return 0
     apostas_para_remover = []
     url_scores = f"https://api.the-odds-api.com/v4/sports/soccer/scores/?apiKey={API_KEY_ODDS}&daysFrom=3"
     try:
@@ -178,11 +154,11 @@ def verificar_apostas_pendentes():
     print("--- Verificação de pendentes finalizada. ---")
     return len(apostas) - len(apostas_para_remover)
 
-# --- 4. FUNÇÃO PRINCIPAL DE ORQUESTRAÇÃO (v2.3 com Logging) ---
+# --- 5. FUNÇÃO PRINCIPAL DE ORQUESTRAÇÃO (VERSÃO 3.3 OFFLINE CALIBRADA) ---
 def rodar_analise_completa():
     num_pendentes = verificar_apostas_pendentes()
     alerta_de_aposta_enviado = False
-    print(f"\n--- 🤖 Iniciando busca v2.3 Online (Casa Alvo: {CASA_ALVO.capitalize()})... ---")
+    print(f"\n--- 🤖 Iniciando busca v3.3 Offline Calibrada (Casa Alvo: {CASA_ALVO.capitalize()})... ---")
     
     url_jogos_e_odds = (f"https://api.the-odds-api.com/v4/sports/soccer/odds?"
                         f"apiKey={API_KEY_ODDS}&regions=eu,us,uk,au"
@@ -191,42 +167,31 @@ def rodar_analise_completa():
         response_jogos = requests.get(url_jogos_e_odds, timeout=25)
         jogos_do_dia = response_jogos.json() if response_jogos.status_code == 200 else []
     except Exception as e:
-        print(f"  > ERRO de conexão: {e}"); jogos_do_dia = []
+        print(f"  > ERRO de conexão ao buscar jogos e odds: {e}"); jogos_do_dia = []
     
     jogos_analisados = 0
     if jogos_do_dia:
         fuso_brasilia = timezone(timedelta(hours=-3))
         for jogo in jogos_do_dia:
             time_casa_nome = jogo['home_team']; time_fora_nome = jogo['away_team']
+            if time_casa_nome not in CATALOGO_TIMES or time_fora_nome not in CATALOGO_TIMES: continue
             if not jogo.get('bookmakers'): continue
-            
-            pista_liga = jogo.get('sport_title', '')
-            id_time_casa = encontrar_id_correto(time_casa_nome, pista_liga, CATALOGO_TIMES)
-            id_time_fora = encontrar_id_correto(time_fora_nome, pista_liga, CATALOGO_TIMES)
-            if not id_time_casa or not id_time_fora: continue
-            
-            jogos_analisados += 1
-            print(f"\nAnalisando {time_casa_nome} vs {time_fora_nome} (usando API-Football)...")
-            stats_casa = buscar_estatisticas_time(id_time_casa, JOGOS_PARA_ANALISE)
-            stats_fora = buscar_estatisticas_time(id_time_fora, JOGOS_PARA_ANALISE)
-            h2h = buscar_h2h(id_time_casa, id_time_fora, JOGOS_H2H)
-            time.sleep(7)
 
-            if not stats_casa or not stats_fora:
-                salvar_log_analise(jogo, None, None, "Dados Insuficientes")
-                print(f"  > Histórico insuficiente na API-Football. Pulando."); continue
+            jogos_analisados += 1
+            print(f"\nAnalisando {time_casa_nome} vs {time_fora_nome} (usando dados locais)...")
+            stats_casa = buscar_estatisticas_do_csv(time_casa_nome, df_historico, JOGOS_PARA_ANALISE)
+            stats_fora = buscar_estatisticas_do_csv(time_fora_nome, df_historico, JOGOS_PARA_ANALISE)
+            h2h = buscar_h2h_do_csv(time_casa_nome, time_fora_nome, df_historico, JOGOS_H2H)
             
-            resultado_estrategia_final = "Reprovado"
+            if not stats_casa or not stats_fora:
+                print(f"  > Histórico insuficiente para '{time_casa_nome}' ou '{time_fora_nome}' no CSV. Pulando."); continue
+            
             mercado, odd_minima, emoji, nome_estrategia, outcome_name = (None,) * 5
             if analisar_fortaleza_defensiva(stats_casa, stats_fora, h2h):
-                resultado_estrategia_final = "Aprovado - Fortaleza Defensiva"
                 mercado, odd_minima, emoji, nome_estrategia, outcome_name = "Menos de 2.5", ODD_MINIMA_UNDER, "🎯", "FORTALEZA DEFENSIVA", "Under"
             elif analisar_tempestade_ofensiva(stats_casa, stats_fora, h2h):
-                resultado_estrategia_final = "Aprovado - Tempestade Ofensiva"
                 mercado, odd_minima, emoji, nome_estrategia, outcome_name = "Mais de 2.5", ODD_MINIMA_OVER, "🔥", "TEMPESTADE OFENSIVA", "Over"
-            
-            salvar_log_analise(jogo, stats_casa, stats_fora, resultado_estrategia_final)
-            if not mercado: continue
+            else: continue
 
             odd_encontrada = next((o.get('price') for b in jogo.get('bookmakers', []) for m in b.get('markets', []) if m.get('key') == 'totals' for o in m.get('outcomes', []) if o.get('name') == outcome_name and o.get('point') == 2.5), None)
             if odd_encontrada and odd_encontrada > odd_minima:
@@ -262,10 +227,12 @@ def rodar_analise_completa():
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
         enviar_alerta_telegram(mensagem_status)
 
-# --- 5. PONTO DE ENTRADA (OTIMIZADO PARA GITHUB ACTIONS) ---
+# --- 6. PONTO DE ENTRADA (OTIMIZADO PARA GITHUB ACTIONS) ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot (v2.3 com Logging) ---")
-    if not all([API_KEY_ODDS, API_KEY_FOOTBALL, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
+    print("--- Iniciando execução única do bot (v3.3 Offline Calibrado) ---")
+    if df_historico is None:
+        print("Encerrando o bot devido a erro no carregamento dos dados históricos.")
+    elif not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     elif not CATALOGO_TIMES:
          print("❌ ERRO FATAL: 'catalogo_times.json' está vazio ou não foi encontrado.")
