@@ -1,0 +1,46 @@
+# Nome do nosso workflow de manutenção
+name: Rodar Manutenção de Dados
+
+on:
+  schedule:
+    # Roda às 10h, 14h e 20h (UTC), uma hora antes do bot principal
+    - cron: '0 10,14,20 * * *'
+  workflow_dispatch:
+    # Permite a execução manual na aba "Actions"
+
+# Permissão para que o robô possa salvar os arquivos atualizados
+permissions:
+  contents: write
+
+jobs:
+  run-maintenance:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. Baixar o código e os arquivos de dados
+      uses: actions/checkout@v4
+
+    - name: 2. Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: 3. Instalar dependências
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 4. Executar o script de manutenção
+      env:
+        API_KEY: ${{ secrets.API_KEY }}
+        API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      run: python manutencao.py
+
+    - name: 5. Salvar arquivos de dados atualizados (Commit & Push)
+      run: |
+        git config --global user.name 'GitHub Actions Bot'
+        git config --global user.email 'actions@github.com'
+        # Adiciona todos os arquivos que podem ter sido modificados
+        git add catalogo_times.json mapa_de_nomes.json dados_historicos_corrigido.csv
+        # Faz o commit e push apenas se houver alguma alteração
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Manutenção automática dos arquivos de dados"; git push)
