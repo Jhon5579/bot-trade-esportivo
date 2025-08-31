@@ -2898,5 +2898,89 @@
             "country": "China",
             "name_api_football": "Wuhan Three Towns"
         }
+    ],
+    "AC Oulu": [
+        {
+            "id": 2077,
+            "country": "Finland",
+            "name_api_football": "AC Oulu"
+        }
+    ],
+    "Angers": [
+        {
+            "id": 77,
+            "country": "France",
+            "name_api_football": "Angers"
+        }
+    ],
+    "FC Nordsjaelland": [
+        {
+            "id": 398,
+            "country": "Denmark",
+            "name_api_football": "FC Nordsjaelland"
+        }
+    ],
+    "FSV Mainz 05": [
+        {
+            "id": 164,
+            "country": "Germany",
+            "name_api_football": "FSV Mainz 05"
+        }
+    ],
+    "HJK Helsinki": [
+        {
+            "id": 649,
+            "country": "Finland",
+            "name_api_football": "HJK helsinki"
+        }
+    ],
+    "Hibernian": [
+        {
+            "id": 3884,
+            "country": "Malta",
+            "name_api_football": "Hibernians"
+        }
+    ],
+    "Manchester City": [
+        {
+            "id": 50,
+            "country": "England",
+            "name_api_football": "Manchester City"
+        }
+    ],
+    "Nottingham Forest": [
+        {
+            "id": 65,
+            "country": "England",
+            "name_api_football": "Nottingham Forest"
+        }
+    ],
+    "Rennes": [
+        {
+            "id": 94,
+            "country": "France",
+            "name_api_football": "Rennes"
+        }
+    ],
+    "Standard Liege": [
+        {
+            "id": 733,
+            "country": "Belgium",
+            "name_api_football": "Standard Liege"
+        }
+    ],
+    "VfL Wolfsburg": [
+        {
+            "id": 161,
+            "country": "Germany",
+            "name_api_football": "VfL Wolfsburg"
+        }
+    ],
+    "West Ham United": [
+        {
+            "id": 16738,
+            "country": "Estonia",
+            "name_api_football": "EstHam United"
+        }
     ]
 }
