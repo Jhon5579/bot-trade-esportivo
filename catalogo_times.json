@@ -2982,5 +2982,159 @@
             "country": "Estonia",
             "name_api_football": "EstHam United"
         }
+    ],
+    "Arsenal": [
+        {
+            "id": 9419,
+            "country": "Belarus",
+            "name_api_football": "Arsenal"
+        }
+    ],
+    "Austria Wien": [
+        {
+            "id": 17575,
+            "country": "Austria",
+            "name_api_football": "Austria Wien W"
+        }
+    ],
+    "Borussia Dortmund": [
+        {
+            "id": 165,
+            "country": "Germany",
+            "name_api_football": "Borussia Dortmund"
+        }
+    ],
+    "FC Copenhagen": [
+        {
+            "id": 400,
+            "country": "Denmark",
+            "name_api_football": "FC Copenhagen"
+        }
+    ],
+    "Fiorentina": [
+        {
+            "id": 502,
+            "country": "Italy",
+            "name_api_football": "Fiorentina"
+        }
+    ],
+    "Galway United": [
+        {
+            "id": 3851,
+            "country": "Ireland",
+            "name_api_football": "Galway United"
+        }
+    ],
+    "Genoa": [
+        {
+            "id": 495,
+            "country": "Italy",
+            "name_api_football": "Genoa"
+        }
+    ],
+    "Juventus": [
+        {
+            "id": 10019,
+            "country": "Brazil",
+            "name_api_football": "Juventus"
+        }
+    ],
+    "KFUM": [
+        {
+            "id": 13169,
+            "country": "Denmark",
+            "name_api_football": "KFUM"
+        }
+    ],
+    "Le Havre": [
+        {
+            "id": 111,
+            "country": "France",
+            "name_api_football": "Le Havre"
+        }
+    ],
+    "Liverpool": [
+        {
+            "id": 40,
+            "country": "England",
+            "name_api_football": "Liverpool"
+        }
+    ],
+    "Metz": [
+        {
+            "id": 112,
+            "country": "France",
+            "name_api_football": "Metz"
+        }
+    ],
+    "Nice": [
+        {
+            "id": 84,
+            "country": "France",
+            "name_api_football": "Nice"
+        }
+    ],
+    "Paris FC": [
+        {
+            "id": 114,
+            "country": "France",
+            "name_api_football": "Paris FC"
+        }
+    ],
+    "Randers FC": [
+        {
+            "id": 401,
+            "country": "Denmark",
+            "name_api_football": "Randers FC"
+        }
+    ],
+    "Rheindorf Altach": [
+        {
+            "id": 24441,
+            "country": "Austria",
+            "name_api_football": "Rheindorf Altach"
+        }
+    ],
+    "Strasbourg": [
+        {
+            "id": 95,
+            "country": "France",
+            "name_api_football": "Strasbourg"
+        }
+    ],
+    "Torino": [
+        {
+            "id": 503,
+            "country": "Italy",
+            "name_api_football": "Torino"
+        }
+    ],
+    "Union Berlin": [
+        {
+            "id": 182,
+            "country": "Germany",
+            "name_api_football": "Union Berlin"
+        }
+    ],
+    "Union Saint-Gilloise": [
+        {
+            "id": 19902,
+            "country": "Belgium",
+            "name_api_football": "Union Saint-Gilloise II"
+        }
+    ],
+    "Villarreal": [
+        {
+            "id": 24925,
+            "country": "Brazil",
+            "name_api_football": "Villa Real"
+        }
+    ],
+    "Wolfsberger AC": [
+        {
+            "id": 1025,
+            "country": "Austria",
+            "name_api_football": "Wolfsberger AC"
+        }
     ]
 }
