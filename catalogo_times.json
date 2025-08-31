@@ -3122,5 +3122,285 @@
             "country": "Italy",
             "name_api_football": "Sudtirol"
         }
+    ],
+    "Amazonas FC": [
+        {
+            "id": 10862,
+            "country": "Brazil",
+            "name_api_football": "Amazonas"
+        }
+    ],
+    "Athletic Club (MG)": [
+        {
+            "id": 13975,
+            "country": "Brazil",
+            "name_api_football": "Athletic Club"
+        }
+    ],
+    "Atlas": [
+        {
+            "id": 20911,
+            "country": "Finland",
+            "name_api_football": "Jalas"
+        }
+    ],
+    "Atletico Goianiense": [
+        {
+            "id": 144,
+            "country": "Brazil",
+            "name_api_football": "Atletico Goianiense"
+        }
+    ],
+    "Atletico Mineiro": [
+        {
+            "id": 18727,
+            "country": "Brazil",
+            "name_api_football": "Atlético Mineiro W"
+        }
+    ],
+    "Bahia": [
+        {
+            "id": 118,
+            "country": "Brazil",
+            "name_api_football": "Bahia"
+        }
+    ],
+    "Barcelona": [
+        {
+            "id": 7823,
+            "country": "Brazil",
+            "name_api_football": "Barcelona RO"
+        }
+    ],
+    "Belgrano de Cordoba": [
+        {
+            "id": 440,
+            "country": "Argentina",
+            "name_api_football": "Belgrano Cordoba"
+        }
+    ],
+    "Braga": [
+        {
+            "id": 3858,
+            "country": "Lithuania",
+            "name_api_football": "Banga"
+        }
+    ],
+    "Colo Colo": [
+        {
+            "id": 15106,
+            "country": "Brazil",
+            "name_api_football": "Colo Colo"
+        }
+    ],
+    "Corinthians": [
+        {
+            "id": 131,
+            "country": "Brazil",
+            "name_api_football": "Corinthians"
+        }
+    ],
+    "Defensa y Justicia": [
+        {
+            "id": 442,
+            "country": "Argentina",
+            "name_api_football": "Defensa Y Justicia"
+        }
+    ],
+    "Deportivo Riestra": [
+        {
+            "id": 476,
+            "country": "Argentina",
+            "name_api_football": "Deportivo Riestra"
+        }
+    ],
+    "Drogheda United": [
+        {
+            "id": 3850,
+            "country": "Ireland",
+            "name_api_football": "Drogheda United"
+        }
+    ],
+    "Flamengo": [
+        {
+            "id": 127,
+            "country": "Brazil",
+            "name_api_football": "Flamengo"
+        }
+    ],
+    "Fluminense": [
+        {
+            "id": 124,
+            "country": "Brazil",
+            "name_api_football": "Fluminense"
+        }
+    ],
+    "Grêmio": [
+        {
+            "id": 130,
+            "country": "Brazil",
+            "name_api_football": "Gremio"
+        }
+    ],
+    "Hellas Verona": [
+        {
+            "id": 24733,
+            "country": "Italy",
+            "name_api_football": "Hellas Verona U20"
+        }
+    ],
+    "Inter Milan": [
+        {
+            "id": 7533,
+            "country": "Italy",
+            "name_api_football": "Inter Milano W"
+        }
+    ],
+    "LA Galaxy": [
+        {
+            "id": 5422,
+            "country": "Botswana",
+            "name_api_football": "Galaxy"
+        }
+    ],
+    "Lazio": [
+        {
+            "id": 487,
+            "country": "Italy",
+            "name_api_football": "Lazio"
+        }
+    ],
+    "Levadiakos": [
+        {
+            "id": 957,
+            "country": "Greece",
+            "name_api_football": "Levadiakos"
+        }
+    ],
+    "Lyon": [
+        {
+            "id": 80,
+            "country": "France",
+            "name_api_football": "Lyon"
+        }
+    ],
+    "Marseille": [
+        {
+            "id": 81,
+            "country": "France",
+            "name_api_football": "Marseille"
+        }
+    ],
+    "Mirassol": [
+        {
+            "id": 7848,
+            "country": "Brazil",
+            "name_api_football": "Mirassol"
+        }
+    ],
+    "Modena": [
+        {
+            "id": 899,
+            "country": "Italy",
+            "name_api_football": "Modena"
+        }
+    ],
+    "Monza": [
+        {
+            "id": 1579,
+            "country": "Italy",
+            "name_api_football": "Monza"
+        }
+    ],
+    "Palmeiras": [
+        {
+            "id": 121,
+            "country": "Brazil",
+            "name_api_football": "Palmeiras"
+        }
+    ],
+    "Panathinaikos": [
+        {
+            "id": 617,
+            "country": "Greece",
+            "name_api_football": "Panathinaikos"
+        }
+    ],
+    "Pumas": [
+        {
+            "id": 13830,
+            "country": "Estonia",
+            "name_api_football": "Puuma"
+        }
+    ],
+    "River Plate": [
+        {
+            "id": 435,
+            "country": "Argentina",
+            "name_api_football": "River Plate"
+        }
+    ],
+    "Santa Clara": [
+        {
+            "id": 15613,
+            "country": "Brazil",
+            "name_api_football": "Santa Maria"
+        }
+    ],
+    "Santos": [
+        {
+            "id": 128,
+            "country": "Brazil",
+            "name_api_football": "Santos"
+        }
+    ],
+    "Shamrock Rovers": [
+        {
+            "id": 652,
+            "country": "Ireland",
+            "name_api_football": "Shamrock Rovers"
+        }
+    ],
+    "Udinese": [
+        {
+            "id": 494,
+            "country": "Italy",
+            "name_api_football": "Udinese"
+        }
+    ],
+    "Universidad de Chile": [
+        {
+            "id": 2323,
+            "country": "Chile",
+            "name_api_football": "Universidad de Chile"
+        }
+    ],
+    "Unión Española": [
+        {
+            "id": 2321,
+            "country": "Chile",
+            "name_api_football": "Union Espanola"
+        }
+    ],
+    "Vitoria": [
+        {
+            "id": 136,
+            "country": "Brazil",
+            "name_api_football": "Vitoria"
+        }
+    ],
+    "Volta Redonda": [
+        {
+            "id": 7814,
+            "country": "Brazil",
+            "name_api_football": "Volta Redonda"
+        }
+    ],
+    "Ñublense": [
+        {
+            "id": 2337,
+            "country": "Chile",
+            "name_api_football": "Nublense"
+        }
     ]
 }
