@@ -5,8 +5,9 @@ import time
 import pandas as pd
 from thefuzz import fuzz
 from datetime import datetime, timezone, timedelta
+import warnings
 
-# --- 1. CONFIGURAÇÕES GERAIS ---
+# --- 1. CONFIGURAções GERAIS ---
 API_KEY_ODDS = os.environ.get('API_KEY')
 API_KEY_FOOTBALL = os.environ.get('API_FOOTBALL_KEY')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
@@ -24,6 +25,9 @@ LIMITE_AUTOMATICO_CONSTRUTOR = 80
 LIMITE_AUTOMATICO_MAPEADOR = 80
 COLUNA_TIME_CASA = 'HomeTeam'
 COLUNA_TIME_FORA = 'AwayTeam'
+
+# MELHORIA: Ignora os avisos de DtypeWarning do pandas para um console mais limpo
+warnings.filterwarnings('ignore', category=pd.errors.DtypeWarning)
 
 # --- 2. FUNÇÕES AUXILIARES ---
 def carregar_json(caminho_arquivo):
@@ -58,7 +62,7 @@ def enviar_alerta_telegram(mensagem):
     except Exception as e:
         print(f"  > ERRO de conexão com o Telegram: {e}")
 
-# --- 3. LÓGICA DAS FERRAMENTAS (AGORA COMO FUNÇÕES) ---
+# --- 3. LÓGICA DAS FERRAMENTAS ---
 
 def rodar_construtor():
     """Fase 1: Atualiza o catálogo e retorna o número de times adicionados."""
@@ -155,22 +159,18 @@ def rodar_corretor():
 if __name__ == "__main__":
     print("===== INICIANDO ROTINA COMPLETA DE MANUTENÇÃO DE DADOS =====")
     
-    # Executa as fases e armazena os resultados
     times_adicionados = rodar_construtor()
     mapas_adicionados = rodar_mapeador()
     
     sucesso_corretor = False
-    # O corretor só roda se as fases anteriores não deram erro
     if times_adicionados != -1 and mapas_adicionados != -1:
         sucesso_corretor = rodar_corretor()
 
     print("\n===== ROTINA DE MANUTENÇÃO FINALIZADA =====")
 
-    # Monta e envia o relatório final para o Telegram
     fuso_horario = timezone(timedelta(hours=-3))
     data_hora_atual = datetime.now(fuso_horario).strftime('%d/%m/%Y às %H:%M')
     
-    # Define o status geral da operação
     status_geral = "✅ Sucesso"
     if times_adicionados == -1 or mapas_adicionados == -1 or not sucesso_corretor:
         status_geral = "❌ Falha"
@@ -182,21 +182,21 @@ if __name__ == "__main__":
         f"-----------------------------------\n\n"
     )
 
+    # CORREÇÃO: Removido o '\' manual antes do ponto final.
     if times_adicionados != -1:
-        relatorio += f"🏗️ *Construtor de Catálogo:*\n- Adicionou *{times_adicionados}* novos times\.\n\n"
+        relatorio += f"🏗️ *Construtor de Catálogo:*\n- Adicionou *{times_adicionados}* novos times.\n\n"
     else:
-        relatorio += f"🏗️ *Construtor de Catálogo:*\n- ❌ Ocorreu um erro nesta fase\.\n\n"
+        relatorio += f"🏗️ *Construtor de Catálogo:*\n- ❌ Ocorreu um erro nesta fase.\n\n"
 
     if mapas_adicionados != -1:
-        relatorio += f"🗺️ *Mapeador de Nomes:*\n- Criou *{mapas_adicionados}* novos mapeamentos\.\n\n"
+        relatorio += f"🗺️ *Mapeador de Nomes:*\n- Criou *{mapas_adicionados}* novos mapeamentos.\n\n"
     else:
-        relatorio += f"🗺️ *Mapeador de Nomes:*\n- ❌ Ocorreu um erro nesta fase\.\n\n"
+        relatorio += f"🗺️ *Mapeador de Nomes:*\n- ❌ Ocorreu um erro nesta fase.\n\n"
 
     if sucesso_corretor:
-        relatorio += f"⚙️ *Corretor de CSV:*\n- ✅ Arquivo de dados corrigido e salvo com sucesso\."
+        relatorio += f"⚙️ *Corretor de CSV:*\n- ✅ Arquivo de dados corrigido e salvo com sucesso."
     else:
-        # Só mostra erro se as fases anteriores não tiveram erro
         if times_adicionados != -1 and mapas_adicionados != -1:
-             relatorio += f"⚙️ *Corretor de CSV:*\n- ❌ Ocorreu um erro nesta fase\."
+             relatorio += f"⚙️ *Corretor de CSV:*\n- ❌ Ocorreu um erro nesta fase."
 
     enviar_alerta_telegram(relatorio)
