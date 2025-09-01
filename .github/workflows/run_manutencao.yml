@@ -3,8 +3,8 @@ name: Rodar Manutenção de Dados
 
 on:
   schedule:
-    # Roda às 10h, 14h e 20h (UTC), uma hora antes do bot principal
-    - cron: '0 10,14,20 * * *'
+    # Roda a cada 4 horas, todos os dias
+    - cron: '0 */4 * * *'
   workflow_dispatch:
     # Permite a execução manual na aba "Actions"
 
