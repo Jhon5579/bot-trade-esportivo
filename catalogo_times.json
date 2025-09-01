@@ -3535,5 +3535,47 @@
             "country": "France",
             "name_api_football": "Arles"
         }
+    ],
+    "Belgium": [
+        {
+            "id": 1,
+            "country": "Belgium",
+            "name_api_football": "Belgium"
+        }
+    ],
+    "Georgia": [
+        {
+            "id": 1104,
+            "country": "Georgia",
+            "name_api_football": "Georgia"
+        }
+    ],
+    "Liechtenstein": [
+        {
+            "id": 1107,
+            "country": "Liechtenstein",
+            "name_api_football": "Liechtenstein"
+        }
+    ],
+    "Lithuania": [
+        {
+            "id": 1097,
+            "country": "Lithuania",
+            "name_api_football": "Lithuania"
+        }
+    ],
+    "Malta": [
+        {
+            "id": 1112,
+            "country": "Malta",
+            "name_api_football": "Malta"
+        }
+    ],
+    "Turkey": [
+        {
+            "id": 24558,
+            "country": "Belgium",
+            "name_api_football": "Turkse"
+        }
     ]
 }
