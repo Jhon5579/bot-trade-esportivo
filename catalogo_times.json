@@ -3479,5 +3479,61 @@
             "country": "Brazil",
             "name_api_football": "Vila Nova"
         }
+    ],
+    "América Mineiro": [
+        {
+            "id": 125,
+            "country": "Brazil",
+            "name_api_football": "America Mineiro"
+        }
+    ],
+    "Avai": [
+        {
+            "id": 145,
+            "country": "Brazil",
+            "name_api_football": "Avai"
+        }
+    ],
+    "Cuiabá": [
+        {
+            "id": 1193,
+            "country": "Brazil",
+            "name_api_football": "Cuiaba"
+        }
+    ],
+    "Ferroviária": [
+        {
+            "id": 7826,
+            "country": "Brazil",
+            "name_api_football": "Ferroviária"
+        }
+    ],
+    "Godoy Cruz": [
+        {
+            "id": 439,
+            "country": "Argentina",
+            "name_api_football": "Godoy Cruz"
+        }
+    ],
+    "Kazakhstan": [
+        {
+            "id": 1095,
+            "country": "Kazakhstan",
+            "name_api_football": "Kazakhstan"
+        }
+    ],
+    "Platense": [
+        {
+            "id": 1064,
+            "country": "Argentina",
+            "name_api_football": "Platense"
+        }
+    ],
+    "Wales": [
+        {
+            "id": 4652,
+            "country": "France",
+            "name_api_football": "Arles"
+        }
     ]
 }
