@@ -14,19 +14,27 @@ ARQUIVO_HISTORICO_APOSTAS = 'historico_de_apostas.json'
 CASA_ALVO = 'pinnacle'
 
 # --- CONFIGURAÇÕES DAS ESTRATÉGIAS DE ODDS ---
-# Estratégia "Ataque do Favorito"
-ODD_MINIMA_FAVORITO = 1.30
+# Estratégia "Ataque do Favorito" em Níveis
+SUPER_FAVORITO_MAX_ODD = 1.50
 FAVORITO_MAX_ODD = 1.60
+ODD_MINIMA_FAVORITO = 1.30
 # Estratégia "Duelo Tático"
 JOGO_EQUILIBRADO_MIN_ODD = 2.40
 ODD_MINIMA_UNDER_Tatico = 1.80
 # Estratégia "Mercado Otimista"
 MERCADO_OTIMISTA_MAX_ODD = 1.70
 ODD_MINIMA_OVER_Otimista = 1.30
+# Estratégias "Consenso"
+CONSENSO_FAVORITO_MAX_ODD = 1.50
+CONSENSO_MERCADO_OVER_MAX_ODD = 1.75
+CONSENSO_OVER_MIN_ODD_VALOR = 1.70
+CONSENSO_EMPATE_MAX_ODD = 3.20
+CONSENSO_MERCADO_UNDER_MAX_ODD = 1.75
+CONSENSO_UNDER_MIN_ODD_VALOR = 1.70
 
 # --- 2. FUNÇÕES DAS ESTRATÉGIAS DE ODDS ---
 
-def analisar_ataque_do_favorito(jogo):
+def analisar_favoritos_em_niveis(jogo):
     odd_casa, odd_fora = None, None
     try:
         bookmaker_data = jogo.get('bookmakers', [])[0]
@@ -36,18 +44,25 @@ def analisar_ataque_do_favorito(jogo):
                     if outcome.get('name') == jogo['home_team']: odd_casa = outcome.get('price')
                     elif outcome.get('name') == jogo['away_team']: odd_fora = outcome.get('price')
     except IndexError: return None
+    
+    nivel_favorito = None
+    if (odd_casa and odd_casa <= SUPER_FAVORITO_MAX_ODD) or (odd_fora and odd_fora <= SUPER_FAVORITO_MAX_ODD):
+        nivel_favorito = "SUPER FAVORITO"
+    elif (odd_casa and odd_casa <= FAVORITO_MAX_ODD) or (odd_fora and odd_fora <= FAVORITO_MAX_ODD):
+        nivel_favorito = "FAVORITO"
 
-    favorito_encontrado = (odd_casa and odd_casa <= FAVORITO_MAX_ODD) or \
-                         (odd_fora and odd_fora <= FAVORITO_MAX_ODD)
+    if not nivel_favorito: return None
 
-    if not favorito_encontrado: return None
-
+    odd_over_1_5 = None
     for market in bookmaker_data.get('markets', []):
         if market.get('key') == 'totals':
             for outcome in market.get('outcomes', []):
                 if outcome.get('name') == 'Over' and outcome.get('point') == 1.5:
-                    if outcome.get('price') > ODD_MINIMA_FAVORITO:
-                        return {"mercado": "Mais de 1.5", "odd": outcome.get('price'), "emoji": '👑', "nome_estrategia": "ATAQUE DO FAVORITO"}
+                    odd_over_1_5 = outcome.get('price'); break
+        if odd_over_1_5: break
+            
+    if odd_over_1_5 and odd_over_1_5 > ODD_MINIMA_FAVORITO:
+        return {"mercado": "Mais de 1.5", "odd": odd_over_1_5, "emoji": '👑', "nome_estrategia": f"ATAQUE DO {nivel_favorito}"}
     return None
 
 def analisar_duelo_tatico(jogo):
@@ -60,11 +75,8 @@ def analisar_duelo_tatico(jogo):
                     if outcome.get('name') == jogo['home_team']: odd_casa = outcome.get('price')
                     elif outcome.get('name') == jogo['away_team']: odd_fora = outcome.get('price')
     except IndexError: return None
-
-    jogo_equilibrado = (odd_casa and odd_casa > JOGO_EQUILIBRADO_MIN_ODD) and \
-                       (odd_fora and odd_fora > JOGO_EQUILIBRADO_MIN_ODD)
+    jogo_equilibrado = (odd_casa and odd_casa > JOGO_EQUILIBRADO_MIN_ODD) and (odd_fora and odd_fora > JOGO_EQUILIBRADO_MIN_ODD)
     if not jogo_equilibrado: return None
-
     for market in bookmaker_data.get('markets', []):
         if market.get('key') == 'totals':
             for outcome in market.get('outcomes', []):
@@ -83,7 +95,6 @@ def analisar_mercado_otimista(jogo):
                     if outcome.get('name') == 'Over' and outcome.get('point') == 2.5:
                         odd_over_2_5 = outcome.get('price'); break
         if odd_over_2_5 is None or odd_over_2_5 > MERCADO_OTIMISTA_MAX_ODD: return None
-
         for market in bookmaker_data.get('markets', []):
             if market.get('key') == 'totals':
                 for outcome in market.get('outcomes', []):
@@ -93,8 +104,46 @@ def analisar_mercado_otimista(jogo):
     except IndexError: return None
     return None
 
-# --- 3. FUNÇÕES DE SUPORTE ---
+def analisar_consenso_de_gols(jogo):
+    odd_favorito, odd_over_2_5 = None, None
+    try:
+        bookmaker_data = jogo.get('bookmakers', [])[0]
+        for market in bookmaker_data.get('markets', []):
+            if market.get('key') == 'h2h':
+                odds_h2h = [o.get('price') for o in market.get('outcomes', []) if o.get('name') != 'Draw']
+                if odds_h2h: odd_favorito = min(odds_h2h)
+        for market in bookmaker_data.get('markets', []):
+            if market.get('key') == 'totals':
+                for outcome in market.get('outcomes', []):
+                    if outcome.get('name') == 'Over' and outcome.get('point') == 2.5:
+                        odd_over_2_5 = outcome.get('price'); break
+    except IndexError: return None
+    if (odd_favorito and odd_favorito <= CONSENSO_FAVORITO_MAX_ODD) and (odd_over_2_5 and odd_over_2_5 <= CONSENSO_MERCADO_OVER_MAX_ODD):
+        if odd_over_2_5 > CONSENSO_OVER_MIN_ODD_VALOR:
+            return {"mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🎯', "nome_estrategia": "CONSENSO DE GOLS"}
+    return None
 
+def analisar_consenso_de_defesa(jogo):
+    odd_empate, odd_under_2_5 = None, None
+    try:
+        bookmaker_data = jogo.get('bookmakers', [])[0]
+        for market in bookmaker_data.get('markets', []):
+            if market.get('key') == 'h2h':
+                for outcome in market.get('outcomes', []):
+                    if outcome.get('name') == 'Draw':
+                        odd_empate = outcome.get('price'); break
+        for market in bookmaker_data.get('markets', []):
+            if market.get('key') == 'totals':
+                for outcome in market.get('outcomes', []):
+                    if outcome.get('name') == 'Under' and outcome.get('point') == 2.5:
+                        odd_under_2_5 = outcome.get('price'); break
+    except IndexError: return None
+    if (odd_empate and odd_empate <= CONSENSO_EMPATE_MAX_ODD) and (odd_under_2_5 and odd_under_2_5 <= CONSENSO_MERCADO_UNDER_MAX_ODD):
+        if odd_under_2_5 > CONSENSO_UNDER_MIN_ODD_VALOR:
+            return {"mercado": "Menos de 2.5", "odd": odd_under_2_5, "emoji": '🛡️', "nome_estrategia": "CONSENSO DE DEFESA"}
+    return None
+
+# --- 3. FUNÇÕES DE SUPORTE ---
 def enviar_alerta_telegram(mensagem):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
@@ -164,12 +213,12 @@ def verificar_apostas_pendentes():
     print("--- Verificação de pendentes finalizada. ---")
     return len(apostas) - len(apostas_para_remover)
 
-# --- 4. FUNÇÃO PRINCIPAL DE ORQUESTRAÇÃO (v5.0 - ESTRATEGISTA DE ODDS) ---
+# --- 4. FUNÇÃO PRINCIPAL DE ORQUESTRAÇÃO (v5.2 - ARSENAL COMPLETO) ---
 def rodar_analise_completa():
     num_pendentes = verificar_apostas_pendentes()
     alerta_de_aposta_enviado_geral = False
-    print(f"\n--- 🤖 Iniciando busca v5.0 (Estrategista de Odds)... ---")
-
+    print(f"\n--- 🤖 Iniciando busca v5.2 (Estrategista de Odds Aprimorado)... ---")
+    
     url_jogos_e_odds = (f"https://api.the-odds-api.com/v4/sports/soccer/odds?"
                         f"apiKey={API_KEY_ODDS}&regions=eu,us,uk,au"
                         f"&markets=h2h,totals&bookmakers={CASA_ALVO}&oddsFormat=decimal")
@@ -178,28 +227,30 @@ def rodar_analise_completa():
         jogos_do_dia = response_jogos.json() if response_jogos.status_code == 200 else []
     except Exception as e:
         print(f"  > ERRO de conexão: {e}"); jogos_do_dia = []
-
+    
     jogos_analisados = 0
     if jogos_do_dia:
         fuso_brasilia = timezone(timedelta(hours=-3))
         for jogo in jogos_do_dia:
             time_casa_nome = jogo['home_team']; time_fora_nome = jogo['away_team']
             if not jogo.get('bookmakers'): continue
-
+            
             jogos_analisados += 1
             print(f"\n--------------------------------------------------")
             print(f"Analisando Jogo: {time_casa_nome} vs {time_fora_nome}")
             oportunidades_encontradas = []
 
-            # Executa todas as estratégias baseadas em odds em paralelo
-            resultado1 = analisar_ataque_do_favorito(jogo)
-            if resultado1: oportunidades_encontradas.append(resultado1)
-
-            resultado2 = analisar_duelo_tatico(jogo)
-            if resultado2: oportunidades_encontradas.append(resultado2)
-
-            resultado3 = analisar_mercado_otimista(jogo)
-            if resultado3: oportunidades_encontradas.append(resultado3)
+            # Executa o arsenal completo de 5 estratégias
+            res1 = analisar_favoritos_em_niveis(jogo);       
+            if res1: oportunidades_encontradas.append(res1)
+            res2 = analisar_duelo_tatico(jogo);             
+            if res2: oportunidades_encontradas.append(res2)
+            res3 = analisar_mercado_otimista(jogo);         
+            if res3: oportunidades_encontradas.append(res3)
+            res4 = analisar_consenso_de_gols(jogo);
+            if res4: oportunidades_encontradas.append(res4)
+            res5 = analisar_consenso_de_defesa(jogo);
+            if res5: oportunidades_encontradas.append(res5)
 
             # Envio dos Alertas
             if oportunidades_encontradas:
@@ -220,7 +271,7 @@ def rodar_analise_completa():
                     except (FileNotFoundError, json.JSONDecodeError): apostas_salvas = []
                     apostas_salvas.append(nova_aposta)
                     with open(ARQUIVO_PENDENTES, 'w', encoding='utf-8') as f: json.dump(apostas_salvas, f, indent=4)
-
+    
     print("\n--- Análise deste ciclo finalizada. ---")
     if not alerta_de_aposta_enviado_geral:
         fuso_brasilia = timezone(timedelta(hours=-3)); data_hoje_str = datetime.now(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
@@ -230,13 +281,13 @@ def rodar_analise_completa():
                            f"- Verifiquei {num_pendentes} apostas pendentes.\n"
                            f"- Analisei {jogos_analisados} jogos hoje.\n\n"
                            f"🚫 *Resultado:*\n"
-                           f"Nenhuma oportunidade encontrada que cumpra os critérios de odds neste ciclo.")
+                           f"Nenhuma oportunidade encontrada que cumpra todos os critérios neste ciclo.")
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
         enviar_alerta_telegram(mensagem_status)
 
 # --- 5. PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot (v5.0 Estrategista de Odds) ---")
+    print("--- Iniciando execução única do bot (v5.2 Estrategista de Odds) ---")
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
