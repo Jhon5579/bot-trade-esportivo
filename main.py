@@ -6,8 +6,9 @@ import time
 from thefuzz import process
 import pandas as pd
 
-# --- 1. CONFIGURAÇÕES GERAIS ---
-API_KEY_ODDS = os.environ.get('API_KEY')
+# (Aqui vai o código completo da versão 13.1 que enviei anteriormente, mas com a linha 11 corrigida)
+# A única mudança é esta linha no topo:
+API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
