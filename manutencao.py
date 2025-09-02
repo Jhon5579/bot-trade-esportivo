@@ -46,7 +46,7 @@ def enviar_alerta_telegram(mensagem):
     for char in caracteres_especiais:
         mensagem = mensagem.replace(char, f'\\{char}')
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {'chat_id': TELEGRAM_CHAT_ID, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
+    payload = {'chat_id': TELEGRAM_CHAT_IDD, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.status_code == 200:
