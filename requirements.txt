@@ -1,4 +1,3 @@
 requests
 pandas
-thefuzz
-python-Levenshtein
+python-thefuzz[speed]
