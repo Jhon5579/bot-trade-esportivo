@@ -1,0 +1,6 @@
+# Arquivos de Cache
+sofascore_id_cache.json
+
+# Pastas de ambiente virtual (se você usar localmente)
+venv/
+__pycache__/
