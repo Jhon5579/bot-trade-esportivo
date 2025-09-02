@@ -1,18 +1,4 @@
-name: Rodar Falcão da ODDS
-
-on:
-  schedule:
-    # Roda a cada 4 horas
-    - cron: '0 */4 * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  run-falcao:
-    runs-on: ubuntu-latest
-    steps:
+steps:
     - uses: actions/checkout@v4
     - name: Configurar Python
       uses: actions/setup-python@v4
@@ -20,14 +6,23 @@ jobs:
         python-version: '3.10'
     - name: Instalar dependências
       run: pip install -r requirements.txt
+      
+    # --- PASSO DE DETETIVE ADICIONADO AQUI ---
+    - name: Verificar se os Segredos foram Carregados
+      run: |
+        echo "API_KEY_ODDS_DEFINIDO: ${{ env.API_KEY_ODDS != '' }}"
+        echo "TELEGRAM_TOKEN_DEFINIDO: ${{ env.TELEGRAM_TOKEN != '' }}"
+        echo "TELEGRAM_CHAT_ID_DEFINIDO: ${{ env.TELEGRAM_CHAT_ID != '' }}"
+
     - name: Executar o Falcão da ODDS
       env:
-        # --- LINHA CORRIGIDA ABAIXO ---
         API_KEY_ODDS: ${{ secrets.API_KEY }} 
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: python main.py
+      
     - name: Salvar estado do bot (apostas, resultados, etc)
+      # ... (resto do arquivo)
       run: |
         git config --global user.name 'GitHub Actions Bot'
         git config --global user.email 'github-actions@github.com'
