@@ -12,12 +12,6 @@ permissions:
 jobs:
   run-falcao:
     runs-on: ubuntu-latest
-    
-    # Define os segredos como variáveis de ambiente para todo o job
-    env:
-      API_KEY_ODDS: ${{ secrets.API_KEY }} 
-      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
     - name: 1. Baixar o código
@@ -31,17 +25,16 @@ jobs:
     - name: 3. Instalar dependências
       run: pip install -r requirements.txt
       
-    # ETAPA DE VERIFICAÇÃO ADICIONADA
-    - name: 4. Verificar se os Segredos foram Carregados
-      run: |
-        echo "API_KEY_ODDS_DEFINIDO: ${{ env.API_KEY_ODDS != '' }}"
-        echo "TELEGRAM_TOKEN_DEFINIDO: ${{ env.TELEGRAM_TOKEN != '' }}"
-        echo "TELEGRAM_CHAT_ID_DEFINIDO: ${{ env.TELEGRAM_CHAT_ID != '' }}"
-
-    - name: 5. Executar o Falcão da ODDS
+    - name: 4. Executar o Falcão da ODDS
+      # --- CORREÇÃO DEFINITIVA APLICADA AQUI ---
+      # Entregando os segredos diretamente para este passo.
+      env:
+        API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: python main.py
       
-    - name: 6. Salvar estado do bot (apostas, resultados, etc)
+    - name: 5. Salvar estado do bot (apostas, resultados, etc)
       run: |
         git config --global user.name 'GitHub Actions Bot'
         git config --global user.email 'github-actions@github.com'
