@@ -6,9 +6,8 @@ import time
 from thefuzz import process
 import pandas as pd
 
-# (Aqui vai o código completo da versão 13.1 que enviei anteriormente, mas com a linha 11 corrigida)
-# A única mudança é esta linha no topo:
-API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
+# --- 1. CONFIGURAÇÕES GERAIS ---
+API_KEY_ODDS = os.environ.get('API_KEY')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
@@ -21,16 +20,28 @@ ARQUIVO_CACHE_IDS = 'sofascore_id_cache.json'
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
 # --- CONFIGURAÇÕES DAS ESTRATÉGIAS ---
-SUPER_FAVORITO_MAX_ODD, FAVORITO_MAX_ODD, ODD_MINIMA_FAVORITO = 1.55, 1.65, 1.30
-JOGO_EQUILIBRADO_MIN_ODD, ODD_MINIMA_UNDER_Tatico = 2.40, 1.80
-MERCADO_OTIMISTA_MAX_ODD, ODD_MINIMA_OVER_Otimista = 1.75, 1.30
-CONSENSO_FAVORITO_MAX_ODD, CONSENSO_MERCADO_OVER_MAX_ODD, CONSENSO_OVER_MIN_ODD_VALOR = 1.55, 1.80, 1.70
-CONSENSO_EMPATE_MAX_ODD, CONSENSO_MERCADO_UNDER_MAX_ODD, CONSENSO_UNDER_MIN_ODD_VALOR = 3.20, 1.80, 1.70
-LINHA_ESTICADA_OVER_2_5_MAX_ODD, LINHA_ESTICADA_UNDER_3_5_MIN_ODD = 1.50, 1.70
-ZEBRA_VALOROSA_FAVORITO_MAX_ODD, ZEBRA_VALOROSA_EMPATE_MAX_ODD = 1.35, 5.00
-MERCADO_CONGELADO_RANGE_MIN, MERCADO_CONGELADO_RANGE_MAX, MERCADO_CONGELADO_BTTS_MIN_ODD = 1.85, 1.95, 1.70
-FAVORITO_CONSERVADOR_MAX_ODD, FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD = 1.55, 1.30
-PRESSAO_MERCADO_OVER_2_5_MIN_ODD, PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.70, 1.85
+SUPER_FAVORITO_MAX_ODD = 1.55
+FAVORITO_MAX_ODD = 1.65
+ODD_MINIMA_FAVORITO = 1.30
+JOGO_EQUILIBRADO_MIN_ODD = 2.40
+ODD_MINIMA_UNDER_Tatico = 1.80
+MERCADO_OTIMISTA_MAX_ODD = 1.75
+ODD_MINIMA_OVER_Otimista = 1.30
+CONSENSO_FAVORITO_MAX_ODD = 1.55
+CONSENSO_MERCADO_OVER_MAX_ODD = 1.80
+CONSENSO_OVER_MIN_ODD_VALOR = 1.70
+CONSENSO_EMPATE_MAX_ODD = 3.20
+CONSENSO_MERCADO_UNDER_MAX_ODD = 1.80
+CONSENSO_UNDER_MIN_ODD_VALOR = 1.70
+LINHA_ESTICADA_OVER_2_5_MAX_ODD = 1.50
+LINHA_ESTICADA_UNDER_3_5_MIN_ODD = 1.70
+ZEBRA_VALOROSA_FAVORITO_MAX_ODD, ZEBRA_VALOROSA_EMPATE_MIN_ODD, ZEBRA_VALOROSA_EMPATE_MAX_ODD = 1.35, 3.50, 5.00
+MERCADO_CONGELADO_RANGE_MIN, MERCADO_CONGELADO_RANGE_MAX = 1.85, 1.95
+MERCADO_CONGELADO_BTTS_MIN_ODD = 1.70
+FAVORITO_CONSERVADOR_MAX_ODD = 1.55
+FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD = 1.30
+PRESSAO_MERCADO_OVER_2_5_MIN_ODD = 1.70
+PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.85
 MIN_JOGOS_HISTORICO = 6
 GOLEADOR_CASA_MIN_AVG_GOLS = 1.75
 GOLEADOR_CASA_MIN_ODD_OVER_1_5 = 1.30
@@ -505,19 +516,19 @@ def rodar_analise_completa():
                     data_hora = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
                     mercado_str = oportunidade['mercado']
                     if "Mais de" in mercado_str or "Menos de" in mercado_str: mercado_str += " Gols"
-                    
+
                     alerta = (f"*{oportunidade['emoji']} ENTRADA VALIDADA ({oportunidade['nome_estrategia']}) {oportunidade['emoji']}*\n\n"
                               f"*⚽ JOGO:* {time_casa} vs {time_fora}\n"
                               f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}\n"
                               f"*🗓️ DATA:* {data_hora}\n\n"
                               f"*📈 MERCADO:* {mercado_str}\n"
                               f"*📊 ODD ENCONTRADA:* *{oportunidade['odd']}*")
-                    
+
                     if 'motivo' in oportunidade and oportunidade['motivo']:
                         alerta += f"\n\n*🔍 Análise do Falcão:*\n_{oportunidade['motivo']}_"
 
                     enviar_alerta_telegram(alerta)
-                    
+
                     timestamp_utc = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).replace(tzinfo=fuso_utc).timestamp()
                     nova_aposta = {
                         "id_api": jogo['id'], "nome_jogo": f"{time_casa} vs {time_fora}", "time_casa": time_casa,
