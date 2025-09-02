@@ -12,7 +12,7 @@ permissions:
 jobs:
   run-falcao:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: 1. Baixar o código
       uses: actions/checkout@v4
@@ -25,14 +25,20 @@ jobs:
     - name: 3. Instalar dependências
       run: pip install -r requirements.txt
       
-    - name: 4. Executar o Falcão da ODDS
-      # --- CORREÇÃO DEFINITIVA APLICADA AQUI ---
-      # Entregando os segredos diretamente para este passo.
+    - name: 4. Executar o Falcão da ODDS (com Diagnóstico)
       env:
         API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: python main.py
+      run: |
+        echo "--- Verificando variáveis de ambiente DENTRO do passo de execução ---"
+        echo "Valor de API_KEY_ODDS: ${{ env.API_KEY_ODDS }}"
+        echo "Valor de TELEGRAM_TOKEN: ${{ env.TELEGRAM_TOKEN }}"
+        echo "Valor de TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}"
+        echo "--------------------------------------------------------"
+        
+        echo "Iniciando script Python..."
+        python main.py
       
     - name: 5. Salvar estado do bot (apostas, resultados, etc)
       run: |
