@@ -5,7 +5,8 @@ from datetime import datetime, timezone, timedelta
 
 # --- CONFIGURAÇÕES ---
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+# --- ALTERADO ---
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID_PESSOAL') 
 
 ARQUIVO_HISTORICO_APOSTAS = 'historico_de_apostas.json'
 ARQUIVO_RESULTADOS_DIA = 'resultados_do_dia.json'
