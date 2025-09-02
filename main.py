@@ -3,7 +3,7 @@ import requests
 import json
 from datetime import datetime, timezone, timedelta
 import time
-from thefuzz import process
+from thefuzz import fuzz, process
 import pandas as pd
 
 # --- 1. CONFIGURAÇÕES GERAIS ---
@@ -21,25 +21,25 @@ ARQUIVO_CACHE_IDS = 'sofascore_id_cache.json'
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
 # --- CONFIGURAÇÕES DAS ESTRATÉGIAS ---
-SUPER_FAVORITO_MAX_ODD, FAVORITO_MAX_ODD, ODD_MINIMA_FAVORITO = 1.55, 1.65, 1.30
+SUPER_FAVORITO_MAX_ODD, FAVORITO_MAX_ODD, ODD_MINIMA_FAVORITO = 1.50, 1.65, 1.30
 JOGO_EQUILIBRADO_MIN_ODD, ODD_MINIMA_UNDER_Tatico = 2.40, 1.80
-MERCADO_OTIMISTA_MAX_ODD, ODD_MINIMA_OVER_Otimista = 1.75, 1.30
-CONSENSO_FAVORITO_MAX_ODD, CONSENSO_MERCADO_OVER_MAX_ODD, CONSENSO_OVER_MIN_ODD_VALOR = 1.55, 1.80, 1.70
+MERCADO_OTIMISTA_MAX_ODD, ODD_MINIMA_OVER_Otimista = 1.60, 1.30
+CONSENSO_FAVORITO_MAX_ODD, CONSENSO_MERCADO_OVER_MAX_ODD, CONSENSO_OVER_MIN_ODD_VALOR = 1.50, 1.60, 1.70
 CONSENSO_EMPATE_MAX_ODD, CONSENSO_MERCADO_UNDER_MAX_ODD, CONSENSO_UNDER_MIN_ODD_VALOR = 3.20, 1.80, 1.70
 LINHA_ESTICADA_OVER_2_5_MAX_ODD, LINHA_ESTICADA_UNDER_3_5_MIN_ODD = 1.50, 1.70
 ZEBRA_VALOROSA_FAVORITO_MAX_ODD, ZEBRA_VALOROSA_EMPATE_MIN_ODD, ZEBRA_VALOROSA_EMPATE_MAX_ODD = 1.35, 3.50, 5.00
 MERCADO_CONGELADO_RANGE_MIN, MERCADO_CONGELADO_RANGE_MAX, MERCADO_CONGELADO_BTTS_MIN_ODD = 1.85, 1.95, 1.70
 FAVORITO_CONSERVADOR_MAX_ODD, FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD = 1.50, 1.30
-PRESSAO_MERCADO_OVER_2_5_MIN_ODD, PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.50, 1.80
+PRESSAO_MERCADO_OVER_2_5_MIN_ODD, PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.70, 1.85
 MIN_JOGOS_HISTORICO = 6
-GOLEADOR_CASA_MIN_AVG_GOLS = 1.50
+GOLEADOR_CASA_MIN_AVG_GOLS = 1.70
 GOLEADOR_CASA_MIN_ODD_OVER_1_5 = 1.30
 VISITANTE_FRACO_MIN_PERC_DERROTAS = 58.0
 VISITANTE_FRACO_ODD_CASA_MIN = 1.50
 VISITANTE_FRACO_ODD_CASA_MAX = 2.50
 MIN_JOGOS_H2H = 3
 CLASSICO_GOLS_MIN_AVG = 3.0
-CLASSICO_GOLS_MIN_ODD_OVER_2_5 = 1.50
+CLASSICO_GOLS_MIN_ODD_OVER_2_5 = 1.70
 FORTALEZA_DEFENSIVA_MAX_AVG_GOLS_SOFRIDOS = 0.85
 FORTALEZA_DEFENSIVA_MIN_ODD_UNDER_2_5 = 1.70
 GIGANTE_MIN_PERC_VITORIAS = 60.0
@@ -47,6 +47,7 @@ GIGANTE_MIN_ODD_VITORIA = 1.40
 LIDER_VS_LANTERNA_ODD_MIN = 1.40
 LIDER_VS_LANTERNA_POSICAO_MAX_LIDER = 3
 LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA = 3
+
 
 # --- 2. FUNÇÕES DAS ESTRATÉGIAS ---
 def extrair_odds_principais(jogo):
@@ -67,45 +68,35 @@ def analisar_lider_vs_lanterna(jogo, contexto):
     liga = jogo.get('sport_title')
     mapa_ligas = contexto.get('mapa_ligas', {})
     if not liga or liga not in mapa_ligas: return None
-
-    id_liga = mapa_ligas[liga]['id_liga']
-    ano_atual_str = str(datetime.now().year)
+    ano_atual_str = str(datetime.now(timezone(timedelta(hours=-3))).year)
     temporada_key = ano_atual_str
     for key in mapa_ligas[liga].get('temporadas', {}):
         if ano_atual_str in key:
             temporada_key = key
             break
-    
     if temporada_key not in mapa_ligas[liga].get('temporadas', {}): return None
+    id_liga = mapa_ligas[liga]['id_liga']
     id_temporada = mapa_ligas[liga]['temporadas'][temporada_key]
-    
     classificacao = consultar_classificacao_sofascore(id_liga, id_temporada, contexto['cache_classificacao'])
     if not classificacao or len(classificacao) < 10: return None
-
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
     pos_casa, pos_fora = None, None
     for time_info in classificacao:
         if time_info['nome'] == time_casa: pos_casa = time_info['posicao']
         if time_info['nome'] == time_fora: pos_fora = time_info['posicao']
-    
     if not (pos_casa and pos_fora): return None
-    
     lider, lanterna, mercado, lider_pos, lanterna_pos = None, None, None, None, None
     total_times = len(classificacao)
     posicao_corte_lanterna = total_times - LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA + 1
-
     if pos_casa <= LIDER_VS_LANTERNA_POSICAO_MAX_LIDER and pos_fora >= posicao_corte_lanterna:
         lider, lanterna, mercado, lider_pos, lanterna_pos = time_casa, time_fora, f"Resultado Final - {time_casa}", pos_casa, pos_fora
     elif pos_fora <= LIDER_VS_LANTERNA_POSICAO_MAX_LIDER and pos_casa >= posicao_corte_lanterna:
         lider, lanterna, mercado, lider_pos, lanterna_pos = time_fora, time_casa, f"Resultado Final - {time_fora}", pos_fora, pos_casa
-    
     if not lider: return None
-
     print(f"  -> Jogo pré-qualificado para 'Líder vs. Lanterna': {lider} ({lider_pos}º) vs {lanterna} ({lanterna_pos}º)")
     odds = extrair_odds_principais(jogo)
     if not odds or not odds.get('h2h'): return None
     odd_vitoria_lider = odds['h2h'].get(lider)
-
     if odd_vitoria_lider and odd_vitoria_lider >= LIDER_VS_LANTERNA_ODD_MIN:
         print(f"  -> ✅ Validação de Odd APROVADA! Odd para {lider} vencer: {odd_vitoria_lider}")
         motivo = f"O time ({lider}) está no topo da tabela ({lider_pos}º lugar), enquanto o adversário ({lanterna}) está na parte de baixo ({lanterna_pos}º lugar)."
@@ -231,7 +222,8 @@ def analisar_duelo_tatico(jogo, contexto):
     odd_casa, odd_fora, odd_under_2_5 = odds['h2h'].get(jogo['home_team']), odds['h2h'].get(jogo['away_team']), odds['totals_2_5'].get('Under')
     if not (odd_casa and odd_fora and odd_under_2_5 and odd_casa > JOGO_EQUILIBRADO_MIN_ODD and odd_fora > JOGO_EQUILIBRADO_MIN_ODD and odd_under_2_5 > ODD_MINIMA_UNDER_Tatico): return None
     print(f"  -> Jogo pré-qualificado para 'Duelo Tático': {jogo['home_team']} vs {jogo['away_team']}")
-    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], contexto['cache_execucao']), consultar_forma_sofascore(jogo['away_team'], contexto['cache_execucao']); time.sleep(2)
+    cache_execucao = contexto['cache_execucao']
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao); time.sleep(2)
     if relatorio_casa and relatorio_fora and relatorio_casa['media_gols_partida'] < 2.6 and relatorio_fora['media_gols_partida'] < 2.6:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"Ambas as equipes vêm de jogos com poucos gols. A média de gols recente do time da casa é {relatorio_casa['media_gols_partida']:.2f} e do visitante é {relatorio_fora['media_gols_partida']:.2f}."
@@ -245,7 +237,8 @@ def analisar_mercado_otimista(jogo, contexto):
     odd_over_2_5, odd_over_1_5 = odds['totals_2_5'].get('Over'), odds.get('totals_1_5', {}).get('Over')
     if not (odd_over_2_5 and odd_over_1_5 and odd_over_2_5 <= MERCADO_OTIMISTA_MAX_ODD and odd_over_1_5 > ODD_MINIMA_OVER_Otimista): return None
     print(f"  -> Jogo pré-qualificado para 'Mercado Otimista': {jogo['home_team']} vs {jogo['away_team']}")
-    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], contexto['cache_execucao']), consultar_forma_sofascore(jogo['away_team'], contexto['cache_execucao']); time.sleep(2)
+    cache_execucao = contexto['cache_execucao']
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao); time.sleep(2)
     if relatorio_casa and relatorio_fora and relatorio_casa['media_gols_partida'] > 2.7 and relatorio_fora['media_gols_partida'] > 2.7:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"Ambas as equipes vêm de jogos com muitos gols. A média de gols recente do time da casa é {relatorio_casa['media_gols_partida']:.2f} e do visitante é {relatorio_fora['media_gols_partida']:.2f}."
@@ -409,27 +402,48 @@ def calcular_estatisticas_historicas(df):
     print(f"  -> Estatísticas individuais para {len(stats_individuais)} times e {len(stats_h2h)} confrontos diretos calculadas.")
     return stats_individuais, stats_h2h
 
-def consultar_forma_sofascore(nome_time, cache_execucao, num_jogos=6):
+def consultar_forma_sofascore(nome_time, cache_execucao, num_jogos=6, apenas_id=False):
     if nome_time in cache_execucao: return cache_execucao[nome_time]
+    
     print(f"  -> 🔎 [Sofascore] Consultando forma para: {nome_time}")
     cache_ids = carregar_json(ARQUIVO_CACHE_IDS)
     time_id = cache_ids.get(nome_time)
+    
     if not time_id:
         try:
             search_url = f"https://api.sofascore.com/api/v1/search/all?q={nome_time}"
             res = requests.get(search_url, headers=HEADERS, timeout=10)
             search_data = res.json()
-            resultados_times = [r['entity'] for r in search_data.get('results', []) if r.get('type') == 'team' and r['entity'].get('sport', {}).get('name') == 'Football']
-            if not resultados_times: return None
+            
+            # --- ÁREA CORRIGIDA ---
+            # Filtra os resultados para incluir apenas futebol MASCULINO
+            resultados_times = [r['entity'] for r in search_data.get('results', []) if r.get('type') == 'team' and r['entity'].get('sport', {}).get('name') == 'Football' and r['entity'].get('gender') == 'M']
+            
+            if not resultados_times:
+                print(f"       -> Falha: Nenhum time de futebol masculino encontrado para '{nome_time}'")
+                return None
+            
             nomes_encontrados = {time['name']: time['id'] for time in resultados_times}
             melhor_match = process.extractOne(nome_time, nomes_encontrados.keys())
-            if not melhor_match or melhor_match[1] < 70: return None
+            
+            if not melhor_match or melhor_match[1] < 70:
+                print(f"       -> Falha: Melhor correspondência para '{nome_time}' foi '{melhor_match[0]}' com apenas {melhor_match[1]}% de confiança.")
+                return None
+                
             time_id = nomes_encontrados[melhor_match[0]]
             cache_ids[nome_time] = time_id
             salvar_json(cache_ids, ARQUIVO_CACHE_IDS)
             time.sleep(1)
-        except Exception: return None
-    if not time_id: return None
+        except Exception as e:
+            print(f"       -> Exceção ao buscar ID: {e}")
+            return None
+            
+    if not time_id:
+        print(f"       -> Falha: Não foi possível encontrar o ID do time da casa '{nome_time}'")
+        return None
+        
+    if apenas_id: return None
+    
     try:
         events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/0"
         res = requests.get(events_url, headers=HEADERS, timeout=10)
@@ -464,25 +478,49 @@ def consultar_classificacao_sofascore(id_liga, id_temporada, cache):
         return []
 
 def buscar_resultado_sofascore(time_casa, time_fora, timestamp_partida):
-    print(f"  -> Buscando resultado para {time_casa} vs {time_fora}")
+    print(f"  -> Buscando resultado para {time_casa} vs {time_fora} (Busca Profunda e Inteligente)")
     cache_temp = {}
-    consultar_forma_sofascore(time_casa, cache_temp)
-    time.sleep(2)
+    consultar_forma_sofascore(time_casa, cache_temp, apenas_id=True)
+    time.sleep(1)
     time_id = carregar_json(ARQUIVO_CACHE_IDS).get(time_casa)
-    if not time_id: return None
+    if not time_id: 
+        return None # A função consultar_forma_sofascore já imprime a falha
     try:
-        events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/0"
-        res = requests.get(events_url, headers=HEADERS, timeout=10)
-        events_data = res.json().get('events', [])
-        for jogo in events_data:
-            oponente_no_jogo = jogo['awayTeam']['name'] if jogo['homeTeam']['id'] == time_id else jogo['homeTeam']['name']
-            if time_fora in oponente_no_jogo and abs(jogo['startTimestamp'] - timestamp_partida) < 7200:
-                if jogo['status']['code'] == 100:
-                    return {'placar_casa': jogo['homeScore']['current'], 'placar_fora': jogo['awayScore']['current']}
-                else:
-                    return "EM_ANDAMENTO"
+        events_data = []
+        print(f"       -> Consultando múltiplas páginas de jogos recentes...")
+        for pagina in range(3):
+            events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/{pagina}"
+            res = requests.get(events_url, headers=HEADERS, timeout=10)
+            if res.status_code != 200: break
+            resposta_json = res.json()
+            novos_eventos = resposta_json.get('events', [])
+            if not novos_eventos: break
+            events_data.extend(novos_eventos)
+            time.sleep(1)
+        if not events_data:
+            print(f"       -> Falha: API não retornou jogos recentes para o time_id {time_id}.")
+            return None
+        melhor_jogo_encontrado, maior_pontuacao = None, -1
+        for jogo_api in events_data:
+            oponente_api = jogo_api['awayTeam']['name'] if jogo_api['homeTeam']['id'] == time_id else jogo_api['homeTeam']['name']
+            timestamp_api = jogo_api['startTimestamp']
+            similaridade_nome = fuzz.ratio(time_fora.lower(), oponente_api.lower())
+            diferenca_tempo_segundos = abs(timestamp_api - timestamp_partida)
+            pontuacao_tempo = max(0, 100 - (diferenca_tempo_segundos / 432))
+            pontuacao_final = (similaridade_nome * 0.7) + (pontuacao_tempo * 0.3)
+            if pontuacao_final > maior_pontuacao:
+                maior_pontuacao, melhor_jogo_encontrado = pontuacao_final, jogo_api
+        if maior_pontuacao > 80:
+            print(f"       -> Melhor correspondência encontrada com {maior_pontuacao:.2f}% de confiança.")
+            if melhor_jogo_encontrado['status']['code'] == 100:
+                return {'placar_casa': melhor_jogo_encontrado['homeScore']['current'], 'placar_fora': melhor_jogo_encontrado['awayScore']['current']}
+            else:
+                return "EM_ANDAMENTO"
+        print(f"       -> Falha: Nenhuma correspondência forte encontrada. Melhor tentativa teve {maior_pontuacao:.2f}% de confiança.")
         return None
-    except Exception: return None
+    except Exception as e:
+        print(f"       -> Falha na conexão com a API do Sofascore: {e}")
+        return None
 
 def verificar_apostas_pendentes_sofascore():
     print("\n--- 🔍 Verificando resultados de apostas pendentes (via Sofascore)... ---")
@@ -556,17 +594,17 @@ def gerar_e_enviar_resumo_diario():
 def rodar_analise_completa():
     gerar_e_enviar_resumo_diario()
     verificar_apostas_pendentes_sofascore()
-    print(f"\n--- 🦅 Iniciando busca v15.0 (Falcão com Contexto)... ---")
+    print(f"\n--- 🦅 Iniciando busca v15.1 (Falcão com Contexto)... ---")
     contexto = {
         "cache_execucao": {}, "cache_classificacao": {},
         "mapa_ligas": carregar_json(ARQUIVO_MAPA_LIGAS),
         "stats_individuais": {}, "stats_h2h": {}
     }
     try:
-        df_historico = pd.read_csv(ARQUIVO_HISTORICO_CORRIGIDO)
+        df_historico = pd.read_csv(ARQUIVO_HISTORICO_CORRIGIDO, low_memory=False)
         contexto["stats_individuais"], contexto["stats_h2h"] = calcular_estatisticas_historicas(df_historico)
     except FileNotFoundError:
-        print(f"  -> AVISO: Arquivo de histórico não encontrado. Estratégias históricas desativadas.")
+        print(f"  -> AVISO: Arquivo '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado. Estratégias históricas desativadas.")
     url_jogos_e_odds = (f"https://api.the-odds-api.com/v4/sports/soccer/odds?apiKey={API_KEY_ODDS}&regions=eu,us,uk,au&markets=h2h,totals&bookmakers={CASA_ALVO}&oddsFormat=decimal")
     try:
         response_jogos = requests.get(url_jogos_e_odds, timeout=30)
@@ -616,13 +654,13 @@ def rodar_analise_completa():
         jogos_texto = "\n".join(nomes_jogos_analisados[:15])
         if len(nomes_jogos_analisados) > 15: jogos_texto += f"\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
         total_pendentes = len(carregar_json(ARQUIVO_PENDENTES))
-        mensagem_status = (f"🦅 *Relatório do Falcão da ODDS (v15.0)*\n\n🗓️ *Data:* {data_hoje_str}\n-----------------------------------\n\n🔍 *Resumo:*\n- Verifiquei e processei resultados antigos.\n- Analisei *{jogos_analisados}* jogos com o arsenal completo de estratégias.\n- Atualmente, há *{total_pendentes}* apostas em aberto.\n\n🚫 *Resultado:*\nNenhuma oportunidade de alta qualidade encontrada neste ciclo.\n\n🗒️ *Jogos Verificados:*\n{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}\n\nContinuo monitorando! 🕵️‍♂️")
+        mensagem_status = (f"🦅 *Relatório do Falcão da ODDS (v15.1)*\n\n🗓️ *Data:* {data_hoje_str}\n-----------------------------------\n\n🔍 *Resumo:*\n- Verifiquei e processei resultados antigos.\n- Analisei *{jogos_analisados}* jogos com o arsenal completo de estratégias.\n- Atualmente, há *{total_pendentes}* apostas em aberto.\n\n🚫 *Resultado:*\nNenhuma oportunidade de alta qualidade encontrada neste ciclo.\n\n🗒️ *Jogos Verificados:*\n{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}\n\nContinuo monitorando! 🕵️‍♂️")
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
         enviar_alerta_telegram(mensagem_status)
 
 # --- 5. PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot (v15.0 Falcão com Contexto) ---")
+    print("--- Iniciando execução única do bot (v15.1 Falcão com Contexto) ---")
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
