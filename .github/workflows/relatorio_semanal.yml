@@ -24,17 +24,23 @@ jobs:
           pip install requests pandas python-dateutil thefuzz
 
       - name: Run Python script to generate report
-        # --- ALTERADO ---
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID_PESSOAL: ${{ secrets.TELEGRAM_CHAT_ID_PESSOAL }}
         run: python gerar_relatorio_semanal.py
 
-      - name: Commit the flag file
+      # --- PASSO CORRIGIDO E MAIS ROBUSTO ---
+      - name: Commit the flag file if it exists
         run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
-          git pull
-          git add *.flag
-          git diff --quiet && git diff --staged --quiet || git commit -m "Adiciona flag do relatório semanal"
-          git push
+          # Verifica se algum ficheiro .flag foi criado
+          if ls *.flag 1> /dev/null 2>&1; then
+            echo "-> Ficheiro .flag encontrado. A fazer o commit..."
+            git config --global user.name 'GitHub Actions'
+            git config --global user.email 'actions@github.com'
+            git pull
+            git add *.flag
+            git commit -m "Adiciona flag do relatório semanal"
+            git push
+          else
+            echo "-> Nenhum ficheiro .flag encontrado para fazer o commit. A terminar."
+          fi
