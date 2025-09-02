@@ -2,8 +2,8 @@ name: Rodar Manutenção de Dados
 
 on:
   schedule:
-    # Roda uma vez por semana, no domingo às 03:00 UTC
-    - cron: '0 3 * * 0'
+    # Roda a cada 3 horas
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 permissions:
