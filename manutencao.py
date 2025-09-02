@@ -9,9 +9,10 @@ import warnings
 
 # --- 1. CONFIGURAÇÕES GERAIS ---
 API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
-API_KEY_FOOTBALL = os.environ.get('API_FOOTBALL_KEY')
+# A chave de API_FOOTBALL não é mais usada, mas podemos manter a linha
+API_KEY_FOOTBALL = os.environ.get('API_FOOTBALL_KEY') 
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_IDD = os.environ.get('TELEGRAM_CHAT_IDD')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
 # Arquivos de Dados
 ARQUIVO_CATALOGO = 'catalogo_times.json'
@@ -42,11 +43,14 @@ def enviar_alerta_telegram(mensagem):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("  > ATENÇÃO: Credenciais do Telegram não configuradas. Mensagem não enviada.")
         return
+    
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in caracteres_especiais:
         mensagem = mensagem.replace(char, f'\\{char}')
+
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {'chat_id': TELEGRAM_CHAT_IDD, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
+    payload = {'chat_id': TELEGRAM_CHAT_ID, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
+    
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.status_code == 200:
@@ -57,39 +61,32 @@ def enviar_alerta_telegram(mensagem):
         print(f"  > ERRO de conexão com o Telegram: {e}")
 
 def carregar_e_combinar_historicos():
-    """Lê os dois arquivos CSV de históricos, combina-os e remove duplicatas."""
     df_lista = []
-    arquivos_encontrados = []
     arquivos_historicos = ['dados_historicos.csv', 'dados_historicos_sofascore.csv']
     print("  > Lendo arquivos de dados históricos...")
     for arquivo in arquivos_historicos:
         try:
-            # Tenta ler com utf-8 primeiro, depois com latin1
             try:
                 df_temp = pd.read_csv(arquivo)
             except UnicodeDecodeError:
                 df_temp = pd.read_csv(arquivo, encoding='latin1')
             df_lista.append(df_temp)
-            arquivos_encontrados.append(arquivo)
             print(f"    - Arquivo '{arquivo}' carregado com {len(df_temp)} linhas.")
         except FileNotFoundError:
             print(f"    - Aviso: Arquivo '{arquivo}' não encontrado. Será ignorado.")
         except Exception as e:
             print(f"    - Erro ao ler '{arquivo}': {e}")
     if not df_lista:
-        return pd.DataFrame(), []
+        return pd.DataFrame()
     df_combinado = pd.concat(df_lista, ignore_index=True)
     print(f"  > Total de linhas antes da limpeza: {len(df_combinado)}")
     df_combinado.drop_duplicates(inplace=True)
     df_combinado.drop_duplicates(subset=['Date', 'HomeTeam', 'AwayTeam'], inplace=True, keep='last')
     print(f"  > Total de linhas após limpeza de duplicatas: {len(df_combinado)}")
-    return df_combinado, arquivos_encontrados
-
+    return df_combinado
 
 # --- 3. LÓGICA DAS FERRAMENTAS ---
-
 def rodar_construtor():
-    # Esta função permanece igual, pois sua fonte é a The Odds API
     print("\n--- 🏗️ FASE 1: EXECUTANDO CONSTRUTOR DE CATÁLOGO... 🏗️ ---")
     catalogo = carregar_json(ARQUIVO_CATALOGO)
     lista_mestra = carregar_json(ARQUIVO_LISTA_MESTRA)
@@ -128,20 +125,15 @@ def rodar_construtor():
     return times_mapeados_nesta_execucao
 
 def rodar_mapeador():
-    """Fase 2: Atualiza o mapa de nomes usando a base de dados combinada."""
     print("\n--- 🗺️ FASE 2: EXECUTANDO MAPEADOR DE NOMES... 🗺️ ---")
     mapa_de_nomes, catalogo = carregar_json(ARQUIVO_MAPA_SAIDA), carregar_json(ARQUIVO_CATALOGO)
     if not catalogo:
         print("❌ ERRO: Catálogo de times está vazio."); return -1
-
-    # MODIFICAÇÃO: Usa a nova função para carregar os dados combinados
-    df, arquivos_lidos = carregar_e_combinar_historicos()
+    df = carregar_e_combinar_historicos()
     if df.empty:
         print("❌ ERRO: Nenhum arquivo de histórico encontrado para mapear."); return -1
-
     nomes_csv_unicos = set(map(str, df[COLUNA_TIME_CASA].unique())) | set(map(str, df[COLUNA_TIME_FORA].unique()))
     nomes_csv_a_mapear = [nome for nome in nomes_csv_unicos if nome not in mapa_de_nomes]
-
     if not nomes_csv_a_mapear:
         print("✅ Todos os times do CSV já foram mapeados."); return 0
     print(f"Analisando {len(nomes_csv_a_mapear)} nomes do CSV que ainda não estão no mapa...")
@@ -163,17 +155,13 @@ def rodar_mapeador():
     return mudancas_feitas
 
 def rodar_corretor():
-    """Fase 3: Aplica o mapa para corrigir a base de dados combinada."""
     print("\n--- ⚙️ FASE 3: EXECUTANDO CORRETOR DE CSV... ⚙️ ---")
     mapa_de_nomes = carregar_json(ARQUIVO_MAPA_SAIDA)
     if not mapa_de_nomes:
         print("❌ ERRO: O arquivo de mapa está vazio."); return False
-
-    # MODIFICAÇÃO: Usa a nova função para carregar os dados combinados
-    df, arquivos_lidos = carregar_e_combinar_historicos()
+    df = carregar_e_combinar_historicos()
     if df.empty:
         print("❌ ERRO: Nenhum arquivo de histórico encontrado para corrigir."); return False
-
     print("Aplicando regras de correção ao banco de dados unificado...")
     df[COLUNA_TIME_CASA] = df[COLUNA_TIME_CASA].replace(mapa_de_nomes)
     df[COLUNA_TIME_FORA] = df[COLUNA_TIME_FORA].replace(mapa_de_nomes)
@@ -187,44 +175,34 @@ def rodar_corretor():
 # --- PONTO DE ENTRADA PRINCIPAL ---
 if __name__ == "__main__":
     print("===== INICIANDO ROTINA COMPLETA DE MANUTENÇÃO DE DADOS =====")
-
     times_adicionados = rodar_construtor()
     mapas_adicionados = rodar_mapeador()
-
     sucesso_corretor = False
     if times_adicionados != -1 and mapas_adicionados != -1:
         sucesso_corretor = rodar_corretor()
-
     print("\n===== ROTINA DE MANUTENÇÃO FINALIZADA =====")
-
     fuso_horario = timezone(timedelta(hours=-3))
     data_hora_atual = datetime.now(fuso_horario).strftime('%d/%m/%Y às %H:%M')
-
     status_geral = "✅ Sucesso"
     if times_adicionados == -1 or mapas_adicionados == -1 or not sucesso_corretor:
         status_geral = "❌ Falha"
-
     relatorio = (
         f"🛠️ *Relatório de Manutenção Automática* 🛠️\n\n"
         f"*Status Geral:* {status_geral}\n"
         f"*Data:* {data_hora_atual}\n"
         f"-----------------------------------\n\n"
     )
-
     if times_adicionados != -1:
-        relatorio += f"🏗️ *Construtor de Catálogo:*\n- Adicionou *{times_adicionados}* novos times.\n\n"
+        relatorio += f"🏗️ *Construtor de Catálogo:*\n- Adicionou *{times_adicionados}* novos times\.\n\n"
     else:
-        relatorio += f"🏗️ *Construtor de Catálogo:*\n- ❌ Ocorreu um erro nesta fase.\n\n"
-
+        relatorio += f"🏗️ *Construtor de Catálogo:*\n- ❌ Ocorreu um erro nesta fase\.\n\n"
     if mapas_adicionados != -1:
-        relatorio += f"🗺️ *Mapeador de Nomes:*\n- Criou *{mapas_adicionados}* novos mapeamentos.\n\n"
+        relatorio += f"🗺️ *Mapeador de Nomes:*\n- Criou *{mapas_adicionados}* novos mapeamentos\.\n\n"
     else:
-        relatorio += f"🗺️ *Mapeador de Nomes:*\n- ❌ Ocorreu um erro nesta fase.\n\n"
-
+        relatorio += f"🗺️ *Mapeador de Nomes:*\n- ❌ Ocorreu um erro nesta fase\.\n\n"
     if sucesso_corretor:
-        relatorio += f"⚙️ *Corretor de CSV:*\n- ✅ Arquivo de dados unificado e salvo com sucesso."
+        relatorio += f"⚙️ *Corretor de CSV:*\n- ✅ Arquivo de dados unificado e salvo com sucesso\."
     else:
         if times_adicionados != -1 and mapas_adicionados != -1:
-             relatorio += f"⚙️ *Corretor de CSV:*\n- ❌ Ocorreu um erro nesta fase."
-
+             relatorio += f"⚙️ *Corretor de CSV:*\n- ❌ Ocorreu um erro nesta fase\."
     enviar_alerta_telegram(relatorio)
