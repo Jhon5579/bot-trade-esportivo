@@ -9,8 +9,6 @@ import warnings
 
 # --- 1. CONFIGURAÇÕES GERAIS ---
 API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
-# A chave de API_FOOTBALL não é mais usada, mas podemos manter a linha
-API_KEY_FOOTBALL = os.environ.get('API_FOOTBALL_KEY') 
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
@@ -131,7 +129,7 @@ def rodar_mapeador():
         print("❌ ERRO: Catálogo de times está vazio."); return -1
     df = carregar_e_combinar_historicos()
     if df.empty:
-        print("❌ ERRO: Nenhum arquivo de histórico encontrado para mapear."); return -1
+        print("AVISO: Nenhum arquivo de histórico encontrado para mapear."); return 0
     nomes_csv_unicos = set(map(str, df[COLUNA_TIME_CASA].unique())) | set(map(str, df[COLUNA_TIME_FORA].unique()))
     nomes_csv_a_mapear = [nome for nome in nomes_csv_unicos if nome not in mapa_de_nomes]
     if not nomes_csv_a_mapear:
@@ -161,7 +159,7 @@ def rodar_corretor():
         print("❌ ERRO: O arquivo de mapa está vazio."); return False
     df = carregar_e_combinar_historicos()
     if df.empty:
-        print("❌ ERRO: Nenhum arquivo de histórico encontrado para corrigir."); return False
+        print("AVISO: Nenhum arquivo de histórico encontrado para corrigir."); return True # Não é um erro, apenas não há o que fazer
     print("Aplicando regras de correção ao banco de dados unificado...")
     df[COLUNA_TIME_CASA] = df[COLUNA_TIME_CASA].replace(mapa_de_nomes)
     df[COLUNA_TIME_FORA] = df[COLUNA_TIME_FORA].replace(mapa_de_nomes)
@@ -175,34 +173,45 @@ def rodar_corretor():
 # --- PONTO DE ENTRADA PRINCIPAL ---
 if __name__ == "__main__":
     print("===== INICIANDO ROTINA COMPLETA DE MANUTENÇÃO DE DADOS =====")
+    
     times_adicionados = rodar_construtor()
     mapas_adicionados = rodar_mapeador()
+    
     sucesso_corretor = False
     if times_adicionados != -1 and mapas_adicionados != -1:
         sucesso_corretor = rodar_corretor()
+
     print("\n===== ROTINA DE MANUTENÇÃO FINALIZADA =====")
+
     fuso_horario = timezone(timedelta(hours=-3))
     data_hora_atual = datetime.now(fuso_horario).strftime('%d/%m/%Y às %H:%M')
+    
     status_geral = "✅ Sucesso"
     if times_adicionados == -1 or mapas_adicionados == -1 or not sucesso_corretor:
         status_geral = "❌ Falha"
+
     relatorio = (
         f"🛠️ *Relatório de Manutenção Automática* 🛠️\n\n"
         f"*Status Geral:* {status_geral}\n"
         f"*Data:* {data_hora_atual}\n"
         f"-----------------------------------\n\n"
     )
+
+    # --- CORREÇÃO APLICADA AQUI: REMOVIDO '\.' ---
     if times_adicionados != -1:
-        relatorio += f"🏗️ *Construtor de Catálogo:*\n- Adicionou *{times_adicionados}* novos times\.\n\n"
+        relatorio += f"🏗️ *Construtor de Catálogo:*\n- Adicionou *{times_adicionados}* novos times.\n\n"
     else:
-        relatorio += f"🏗️ *Construtor de Catálogo:*\n- ❌ Ocorreu um erro nesta fase\.\n\n"
+        relatorio += f"🏗️ *Construtor de Catálogo:*\n- ❌ Ocorreu um erro nesta fase.\n\n"
+
     if mapas_adicionados != -1:
-        relatorio += f"🗺️ *Mapeador de Nomes:*\n- Criou *{mapas_adicionados}* novos mapeamentos\.\n\n"
+        relatorio += f"🗺️ *Mapeador de Nomes:*\n- Criou *{mapas_adicionados}* novos mapeamentos.\n\n"
     else:
-        relatorio += f"🗺️ *Mapeador de Nomes:*\n- ❌ Ocorreu um erro nesta fase\.\n\n"
+        relatorio += f"🗺️ *Mapeador de Nomes:*\n- ❌ Ocorreu um erro nesta fase.\n\n"
+
     if sucesso_corretor:
-        relatorio += f"⚙️ *Corretor de CSV:*\n- ✅ Arquivo de dados unificado e salvo com sucesso\."
+        relatorio += f"⚙️ *Corretor de CSV:*\n- ✅ Arquivo de dados unificado e salvo com sucesso."
     else:
         if times_adicionados != -1 and mapas_adicionados != -1:
-             relatorio += f"⚙️ *Corretor de CSV:*\n- ❌ Ocorreu um erro nesta fase\."
+             relatorio += f"⚙️ *Corretor de CSV:*\n- ❌ Ocorreu um erro nesta fase."
+
     enviar_alerta_telegram(relatorio)
