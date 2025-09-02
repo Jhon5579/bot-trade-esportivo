@@ -3507,5 +3507,89 @@
             "country": "Spain",
             "name_api_football": "Huesca"
         }
+    ],
+    "Belgium": [
+        {
+            "id": 1,
+            "country": "Belgium",
+            "name_api_football": "Belgium"
+        }
+    ],
+    "Bulgaria": [
+        {
+            "id": 1103,
+            "country": "Bulgaria",
+            "name_api_football": "Bulgaria"
+        }
+    ],
+    "Georgia": [
+        {
+            "id": 1104,
+            "country": "Georgia",
+            "name_api_football": "Georgia"
+        }
+    ],
+    "Germany": [
+        {
+            "id": 25,
+            "country": "Germany",
+            "name_api_football": "Germany"
+        }
+    ],
+    "Liechtenstein": [
+        {
+            "id": 1107,
+            "country": "Liechtenstein",
+            "name_api_football": "Liechtenstein"
+        }
+    ],
+    "Lithuania": [
+        {
+            "id": 1097,
+            "country": "Lithuania",
+            "name_api_football": "Lithuania"
+        }
+    ],
+    "Luxembourg": [
+        {
+            "id": 1102,
+            "country": "Luxembourg",
+            "name_api_football": "Luxembourg"
+        }
+    ],
+    "Malta": [
+        {
+            "id": 1112,
+            "country": "Malta",
+            "name_api_football": "Malta"
+        }
+    ],
+    "Northern Ireland": [
+        {
+            "id": 771,
+            "country": "Northern-Ireland",
+            "name_api_football": "Northern Ireland"
+        }
+    ],
+    "Slovakia": [
+        {
+            "id": 773,
+            "country": "Slovakia",
+            "name_api_football": "Slovakia"
+        }
+    ],
+    "Spain": [
+        {
+            "id": 9,
+            "country": "Spain",
+            "name_api_football": "Spain"
+        }
+    ],
+    "Turkey": [
+        {
+            "id": 1759,
+            "country": "Turkey",
+            "name_api_football": "Turkey W"
+        }
     ]
 }
