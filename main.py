@@ -7,7 +7,7 @@ from thefuzz import process
 import pandas as pd
 
 # --- 1. CONFIGURAÇÕES GERAIS ---
-API_KEY_ODDS = os.environ.get('API_KEY_ODD')
+API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
