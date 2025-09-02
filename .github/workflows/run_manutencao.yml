@@ -24,7 +24,7 @@ jobs:
       env:
         API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }}
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_IDD }}
+        TELEGRAM_CHAT_IDD: ${{ secrets.TELEGRAM_CHAT_IDD }}
       run: python manutencao.py
     - name: Salvar arquivos de dados atualizados
       run: |
