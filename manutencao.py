@@ -8,10 +8,10 @@ from datetime import datetime, timezone, timedelta
 import warnings
 
 # --- 1. CONFIGURAÇÕES GERAIS ---
-API_KEY_ODDS = os.environ.get('API_KEY')
+API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
 API_KEY_FOOTBALL = os.environ.get('API_FOOTBALL_KEY')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_IDD')
 
 # Arquivos de Dados
 ARQUIVO_CATALOGO = 'catalogo_times.json'
