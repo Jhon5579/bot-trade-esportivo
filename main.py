@@ -69,26 +69,37 @@ def obter_sofascore_id(nome_time, cache_ids):
     if nome_time in cache_ids:
         return cache_ids[nome_time]
 
-    print(f"  -> 🔎 [Sofascore] Procurando ID para: {nome_time}")
+    # --- LÓGICA ATUALIZADA ---
+    # 1. Carrega o mapa de traduções
+    mapa_sofascore = carregar_json('mapa_nomes_sofascore.json')
+    # 2. Verifica se o nome do time está no mapa. Se estiver, usa a tradução. Senão, usa o original.
+    nome_para_busca = mapa_sofascore.get(nome_time, nome_time)
+
+    # Imprime qual nome está a ser usado para a busca
+    if nome_time != nome_para_busca:
+        print(f"  -> 🔎 [Sofascore] Nome '{nome_time}' traduzido para '{nome_para_busca}' pelo mapa.")
+    print(f"  -> 🔎 [Sofascore] Procurando ID para: '{nome_para_busca}'")
+
     try:
-        search_url = f"https://api.sofascore.com/api/v1/search/all?q={nome_time}"
+        search_url = f"https://api.sofascore.com/api/v1/search/all?q={nome_para_busca}"
         res = requests.get(search_url, headers=HEADERS, timeout=10)
         search_data = res.json()
 
         resultados_times = [r['entity'] for r in search_data.get('results', []) if r.get('type') == 'team' and r['entity'].get('sport', {}).get('name') == 'Football' and r['entity'].get('gender') == 'M']
 
         if not resultados_times:
-            print(f"       -> Falha: Nenhum time de futebol masculino encontrado para '{nome_time}'")
+            print(f"       -> Falha: Nenhum time de futebol masculino encontrado para '{nome_para_busca}'")
             return None
 
         nomes_encontrados = {time['name']: time['id'] for time in resultados_times}
-        melhor_match = process.extractOne(nome_time, nomes_encontrados.keys())
+        melhor_match = process.extractOne(nome_para_busca, nomes_encontrados.keys())
 
         if not melhor_match or melhor_match[1] < 85:
-            print(f"       -> Falha: Melhor correspondência para '{nome_time}' foi fraca.")
+            print(f"       -> Falha: Melhor correspondência para '{nome_para_busca}' foi fraca.")
             return None
 
         time_id = nomes_encontrados[melhor_match[0]]
+        # Salva o ID com o nome original para o cache funcionar corretamente
         cache_ids[nome_time] = time_id
         salvar_json(cache_ids, ARQUIVO_CACHE_IDS)
         time.sleep(1)
