@@ -3605,5 +3605,26 @@
             "country": "Poland",
             "name_api_football": "Poland"
         }
+    ],
+    "Ashton United FC": [
+        {
+            "id": 7693,
+            "country": "England",
+            "name_api_football": "Ashton United"
+        }
+    ],
+    "Hallam FC": [
+        {
+            "id": 8804,
+            "country": "England",
+            "name_api_football": "Hallam"
+        }
+    ],
+    "Shaftesbury FC": [
+        {
+            "id": 8926,
+            "country": "England",
+            "name_api_football": "Shaftesbury Town"
+        }
     ]
 }
