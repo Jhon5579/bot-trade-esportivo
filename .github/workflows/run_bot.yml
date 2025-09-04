@@ -1,105 +1,44 @@
-on: 
-
-   schedule: 
-
-     # Roda a cada 4 horas 
-
-     - cron: '0 */4 * * *' 
-
-   workflow_dispatch: 
-
-
-
- permissions: 
-
-   contents: write 
-
-
-
- jobs: 
-
-   run-falcao: 
-
-     runs-on: ubuntu-latest 
-
-      
-
-     steps: 
-
-     - name: 1. Baixar o código 
-
-       uses: actions/checkout@v4 
-
-
-
-     - name: 2. Configurar Python 
-
-       uses: actions/setup-python@v4 
-
-       with:
-
-python-version: '3.10'
-
-
-
-
-
-
-
-    - name: 3. Instalar dependências
-
-
-
-      run: pip install -r requirements.txt
-
-
-
-      
-
-
-
-    - name: 4. Executar o Falcão da ODDS
-
-
-
-      env:
-
-
-
-        API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
-
-
-
-        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-
-
-
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
-
-
-      run: python main.py
-
-
-
-   - name: 5. Salvar estado do bot (apostas, resultados, etc)
-
-
-
-      run: |
-
-
-
-        git config --global user.name 'GitHub Actions Bot'
-
-
-
-        git config --global user.email 'github-actions@github.com'
-
-
-
-        git add .
-
-
-
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
+name: Rodar Falcão da ODDS
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-falcao:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 1. Baixar o código
+      uses: actions/checkout@v4
+
+    - name: 2. Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: 3. Instalar dependências
+      run: pip install -r requirements.txt
+    
+    # --- NOVO PASSO DE DEPURAÇÃO ---
+    # Este passo vai mostrar-nos a estrutura exata das pastas e arquivos.
+    - name: Debug - Listar arquivos e pastas
+      run: ls -R
+
+    - name: 4. Executar o Falcão da ODDS
+      env:
+        API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: python bot-trade-esportivo/main.py
+      
+    - name: 5. Salvar estado do bot (apostas, resultados, etc)
+      run: |
+        git config --global user.name 'GitHub Actions Bot'
+        git config --global user.email 'github-actions@github.com'
+        git add .
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
