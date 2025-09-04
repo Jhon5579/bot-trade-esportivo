@@ -1537,9 +1537,9 @@ def rodar_analise_completa():
     if not alerta_de_aposta_enviado_geral:
         data_hoje_str = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
         jogos_texto = "\\n".join(nomes_jogos_analisados[:15])
-        if len(nomes_jogos_analisados) > 15: jogos_texto += f"\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
+        if len(nomes_jogos_analisados) > 15: jogos_texto += f"\\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
         total_pendentes = len(carregar_json(ARQUIVO_PENDENTES))
-
+        
         linhas_mensagem = [
             f"🦅 *Relatório do Falcão da ODDS (v15.3)*", "", f"🗓️ *Data:* {data_hoje_str}", "-----------------------------------", "", "🔍 *Resumo:*",
             "- Verifiquei e processei resultados antigos.", f"- Analisei *{jogos_analisados}* jogos com o arsenal completo de estratégias.",
@@ -1547,6 +1547,8 @@ def rodar_analise_completa():
             "", "🗒️ *Jogos Verificados:*", f"{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}", "", "Continuo monitorando! 🕵️‍♂️"
         ]
         mensagem_status = "\\n".join(linhas_mensagem)
+        # --- FIM DA ÁREA CORRIGIDA ---
+        
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
         enviar_alerta_telegram(mensagem_status)
 
