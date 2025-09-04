@@ -3640,5 +3640,33 @@
             "country": "Venezuela",
             "name_api_football": "Venezuela"
         }
+    ],
+    "Bolivia": [
+        {
+            "id": 2381,
+            "country": "Bolivia",
+            "name_api_football": "Bolivia"
+        }
+    ],
+    "Colombia": [
+        {
+            "id": 8,
+            "country": "Colombia",
+            "name_api_football": "Colombia"
+        }
+    ],
+    "Ecuador": [
+        {
+            "id": 2382,
+            "country": "Ecuador",
+            "name_api_football": "Ecuador"
+        }
+    ],
+    "Paraguay": [
+        {
+            "id": 2380,
+            "country": "Paraguay",
+            "name_api_football": "Paraguay"
+        }
     ]
 }
