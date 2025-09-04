@@ -1,0 +1,85 @@
+# config.py
+"""
+Arquivo central de configurações e parâmetros para todas as estratégias do bot.
+"""
+
+# --- PARÂMETROS GLOBAIS ---
+ODD_MINIMA_GLOBAL = 1.50
+DIA_DO_RELATORIO_SEMANAL = 6  # 0=Segunda, 6=Domingo
+MIN_JOGOS_HISTORICO = 6
+MIN_JOGOS_H2H = 3
+
+# --- PARÂMETROS POR ESTRATÉGIA ---
+
+# Estratégia: Ambas Marcam (BTTS)
+BTTS_MIN_AVG_GOLS_PARTIDA = 2.8
+
+# Estratégia: Escanteios (Cantos)
+CANTOS_NUM_JOGOS_ANALISE = 8
+CANTOS_MEDIA_MINIMA_TOTAL = 10.5
+
+# Estratégia: Favoritos em Níveis (Super Favorito / Favorito)
+SUPER_FAVORITO_MAX_ODD = 1.50
+FAVORITO_MAX_ODD = 1.65
+ODD_MINIMA_FAVORITO = 1.30 # Usada para o mercado de Over 1.5
+
+# Estratégia: Duelo Tático (Under)
+JOGO_EQUILIBRADO_MIN_ODD = 2.40
+ODD_MINIMA_UNDER_Tatico = 1.80
+
+# Estratégia: Mercado Otimista (Over)
+MERCADO_OTIMISTA_MAX_ODD = 1.60
+ODD_MINIMA_OVER_Otimista = 1.30
+
+# Estratégia: Consenso de Gols (Over)
+CONSENSO_FAVORITO_MAX_ODD = 1.50
+CONSENSO_MERCADO_OVER_MAX_ODD = 1.60
+CONSENSO_OVER_MIN_ODD_VALOR = 1.70
+
+# Estratégia: Consenso de Defesa (Under)
+CONSENSO_EMPATE_MAX_ODD = 3.20
+CONSENSO_MERCADO_UNDER_MAX_ODD = 1.80
+CONSENSO_UNDER_MIN_ODD_VALOR = 1.70
+
+# Estratégia: Linha Esticada (Under)
+LINHA_ESTICADA_OVER_2_5_MAX_ODD = 1.50
+LINHA_ESTICADA_UNDER_3_5_MIN_ODD = 1.70
+
+# Estratégia: Zebra Valorosa (Empate)
+ZEBRA_VALOROSA_FAVORITO_MAX_ODD = 1.35
+ZEBRA_VALOROSA_EMPATE_MIN_ODD = 3.50
+ZEBRA_VALOROSA_EMPATE_MAX_ODD = 5.00
+
+# Estratégia: Favorito Conservador (Over 1.5)
+FAVORITO_CONSERVADOR_MAX_ODD = 1.50
+FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD = 1.30
+
+# Estratégia: Pressão do Mercado (Over 2.5)
+PRESSAO_MERCADO_OVER_2_5_MIN_ODD = 1.70
+PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.85
+
+# Estratégia: Goleador da Casa (Over 1.5)
+GOLEADOR_CASA_MIN_AVG_GOLS = 1.70
+GOLEADOR_CASA_MIN_ODD_OVER_1_5 = 1.30
+
+# Estratégia: Visitante Fraco (Vitória do Casa)
+VISITANTE_FRACO_MIN_PERC_DERROTAS = 58.0
+VISITANTE_FRACO_ODD_CASA_MIN = 1.50
+VISITANTE_FRACO_ODD_CASA_MAX = 2.50
+
+# Estratégia: Clássico de Gols (Over 2.5 H2H)
+CLASSICO_GOLS_MIN_AVG = 3.0
+CLASSICO_GOLS_MIN_ODD_OVER_2_5 = 1.70
+
+# Estratégia: Fortaleza Defensiva (Under 2.5)
+FORTALEZA_DEFENSIVA_MAX_AVG_GOLS_SOFRIDOS = 0.85
+FORTALEZA_DEFENSIVA_MIN_ODD_UNDER_2_5 = 1.70
+
+# Estratégia: Reação do Gigante (Vitória do Gigante)
+GIGANTE_MIN_PERC_VITORIAS = 60.0
+GIGANTE_MIN_ODD_VITORIA = 1.40
+
+# Estratégia: Líder vs Lanterna (Vitória do Líder)
+LIDER_VS_LANTERNA_ODD_MIN = 1.40
+LIDER_VS_LANTERNA_POSICAO_MAX_LIDER = 3
+LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA = 3 # Posições a contar do fim da tabela (ex: os 3 últimos)
