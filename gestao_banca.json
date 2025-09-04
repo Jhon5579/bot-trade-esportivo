@@ -1,0 +1,6 @@
+{
+    "banca_inicial": 100.0,
+    "banca_atual": 100.0,
+    "stake_padrao_percentual": 5.0,
+    "perda_a_recuperar": 0.0
+}
