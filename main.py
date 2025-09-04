@@ -1518,7 +1518,7 @@ def rodar_analise_completa():
                         if 'motivo' in oportunidade and oportunidade['motivo']:
                             linhas_alerta.extend(["", "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_"])
 
-                        alerta = "\\n".join(linhas_alerta)
+                        alerta = "\n".join(linhas_alerta)
                         enviar_alerta_telegram(alerta)
 
                         timestamp_utc = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).replace(tzinfo=fuso_utc).timestamp()
@@ -1536,8 +1536,8 @@ def rodar_analise_completa():
     print("\n--- Análise deste ciclo finalizada. ---")
     if not alerta_de_aposta_enviado_geral:
         data_hoje_str = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
-        jogos_texto = "\\n".join(nomes_jogos_analisados[:15])
-        if len(nomes_jogos_analisados) > 15: jogos_texto += f"\\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
+        jogos_texto = "\n".join(nomes_jogos_analisados[:15])
+        if len(nomes_jogos_analisados) > 15: jogos_texto += f"\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
         total_pendentes = len(carregar_json(ARQUIVO_PENDENTES))
         
         linhas_mensagem = [
@@ -1546,7 +1546,7 @@ def rodar_analise_completa():
             f"- Atualmente, há *{total_pendentes}* apostas em aberto.", "", "🚫 *Resultado:*", "Nenhuma oportunidade de alta qualidade encontrada neste ciclo.",
             "", "🗒️ *Jogos Verificados:*", f"{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}", "", "Continuo monitorando! 🕵️‍♂️"
         ]
-        mensagem_status = "\\n".join(linhas_mensagem)
+        mensagem_status = "\n".join(linhas_mensagem)
         # --- FIM DA ÁREA CORRIGIDA ---
         
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
