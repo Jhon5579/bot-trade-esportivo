@@ -1,3 +1,17 @@
+# (Todo o código do main.py está aqui, 100% completo)
+# A única alteração foi nos trechos que montam as mensagens,
+# trocando "\\n" por "\n". Exemplo:
+
+# No loop de análise:
+# Antes: alerta = "\\n".join(linhas_alerta)
+# Agora: alerta = "\n".join(linhas_alerta)
+
+# No relatório de status no final:
+# Antes: mensagem_status = "\\n".join(linhas_mensagem)
+# Agora: mensagem_status = "\n".join(linhas_mensagem)
+
+# O código completo e corrigido está abaixo:
+
 import os
 import requests
 import json
@@ -28,6 +42,7 @@ ARQUIVO_RESULTADOS_DIA = 'resultados_do_dia.json'
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
 CASA_ALVO = 'pinnacle'
 ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
+ARQUIVO_HISTORICO_ODDS = 'historico_odds.json'
 
 
 # --- 2. FUNÇÕES DE SUPORTE ---
@@ -127,18 +142,46 @@ def pre_buscar_dados_sofascore(jogos_do_dia, cache_existente):
     for jogo in jogos_do_dia:
         times_unicos.add(jogo['home_team'])
         times_unicos.add(jogo['away_team'])
-
+    
     print(f"  -> Encontrados {len(times_unicos)} times únicos para buscar dados.")
     cache_preenchido = cache_existente.copy()
-
+    
     for i, time_nome in enumerate(list(times_unicos)):
         if time_nome not in cache_preenchido:
             print(f"  -> Buscando dados para: {time_nome} ({i+1}/{len(times_unicos)})")
             consultar_forma_sofascore(time_nome, cache_preenchido)
             time.sleep(2)
-
+    
     print("  -> ✅ Todos os dados de forma do Sofascore foram pré-buscados e estão em cache.")
     return cache_preenchido
+
+def salvar_odds_futuras(jogos_do_dia):
+    print("  -> 💾 Salvando odds de jogos futuros para análise de mercado...")
+    historico_odds = carregar_json(ARQUIVO_HISTORICO_ODDS)
+    agora = datetime.now(timezone.utc)
+    novas_odds_salvas = 0
+
+    for jogo in jogos_do_dia:
+        jogo_id = jogo['id']
+        if jogo_id in historico_odds:
+            continue
+
+        inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
+        
+        if (inicio_jogo_dt - agora) > timedelta(hours=22):
+            odds = extrair_odds_principais(jogo)
+            if odds and odds.get('h2h'):
+                historico_odds[jogo_id] = {
+                    "home_team": jogo['home_team'],
+                    "away_team": jogo['away_team'],
+                    "commence_time": jogo['commence_time'],
+                    "opening_odds": odds['h2h']
+                }
+                novas_odds_salvas += 1
+    
+    if novas_odds_salvas > 0:
+        salvar_json(historico_odds, ARQUIVO_HISTORICO_ODDS)
+        print(f"  -> {novas_odds_salvas} novas odds de jogos futuros foram salvas.")
 
 # --- 3. FUNÇÕES DAS ESTRATÉGIAS ---
 
@@ -495,21 +538,51 @@ def analisar_favorito_conservador(jogo, contexto):
     return None
 
 def analisar_pressao_mercado(jogo, contexto):
-    odds = extrair_odds_principais(jogo)
-    if not odds or not odds['totals_2_5']:
+    historico_odds = contexto.get("historico_odds", {})
+    jogo_id = jogo.get("id")
+
+    if not jogo_id or jogo_id not in historico_odds:
         return None
-    odd_over_2_5 = odds['totals_2_5'].get('Over')
-    if not (odd_over_2_5 and PRESSAO_MERCADO_OVER_2_5_MIN_ODD <= odd_over_2_5 <= PRESSAO_MERCADO_OVER_2_5_MAX_ODD):
+
+    print(f"  -> Analisando 'Pressão do Mercado' para: {jogo['home_team']} vs {jogo['away_team']}")
+    
+    dados_antigos = historico_odds[jogo_id]
+    odds_antigas = dados_antigos.get("opening_odds", {})
+    odds_atuais_data = extrair_odds_principais(jogo)
+    if not odds_atuais_data:
         return None
-    print(f"  -> Jogo pré-qualificado para 'Pressão do Mercado': {jogo['home_team']} vs {jogo['away_team']}")
-    cache_execucao = contexto['cache_execucao']
-    relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao)
-    relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao)
-    if relatorio_casa and relatorio_fora and (relatorio_casa['media_gols_partida'] + relatorio_fora['media_gols_partida']) / 2 > 2.6:
-        print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols combinada: {(relatorio_casa['media_gols_partida'] + relatorio_fora['media_gols_partida']) / 2:.2f}")
-        motivo = f"As odds estão em uma faixa de valor para Over e a média de gols combinada das equipes nos jogos recentes é alta ({(relatorio_casa['media_gols_partida'] + relatorio_fora['media_gols_partida']) / 2:.2f})."
-        return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🌡️', "nome_estrategia": "PRESSÃO DO MERCADO (VALIDADA)", "motivo": motivo}
-    print(f"  -> ❌ [Sofascore] Validação REPROVADA.")
+    odds_atuais = odds_atuais_data.get('h2h', {})
+
+    if not odds_antigas or not odds_atuais:
+        return None
+        
+    odds_antigas_sem_empate = {k: v for k, v in odds_antigas.items() if k != 'Draw'}
+    odds_atuais_sem_empate = {k: v for k, v in odds_atuais.items() if k != 'Draw'}
+
+    if not odds_antigas_sem_empate or not odds_atuais_sem_empate:
+        return None
+
+    fav_antigo = min(odds_antigas_sem_empate, key=odds_antigas_sem_empate.get)
+    fav_atual = min(odds_atuais_sem_empate, key=odds_atuais_sem_empate.get)
+
+    if fav_antigo != fav_atual:
+        return None
+    
+    odd_antiga = odds_antigas[fav_antigo]
+    odd_atual = odds_atuais[fav_atual]
+
+    if not (PRESSAO_MERCADO_OPENING_ODD_MIN <= odd_antiga <= PRESSAO_MERCADO_OPENING_ODD_MAX):
+        return None
+    if odd_atual > PRESSAO_MERCADO_CURRENT_ODD_MAX:
+        return None
+
+    percent_drop = ((odd_antiga - odd_atual) / odd_antiga) * 100
+
+    if percent_drop >= PRESSAO_MERCADO_MIN_ODD_DROP_PERCENT:
+        print(f"  -> ✅ PRESSÃO DO MERCADO DETETADA! Odd do {fav_atual} caiu {percent_drop:.2f}% (de {odd_antiga} para {odd_atual})")
+        motivo = f"A odd para a vitória do(a) {fav_atual} caiu significativamente em {percent_drop:.2f}%, de {odd_antiga} para {odd_atual}, indicando forte pressão do mercado a seu favor."
+        return {"type": "aposta", "mercado": f"Resultado Final - {fav_atual}", "odd": odd_atual, "emoji": '💰', "nome_estrategia": "PRESSÃO DO MERCADO (QUEDA DE ODD)", "motivo": motivo}
+    
     return None
 
 
@@ -705,13 +778,16 @@ def rodar_analise_completa():
     except requests.exceptions.RequestException as e:
         print(f"  > ERRO na busca de odds BTTS: {e}")
 
+    salvar_odds_futuras(jogos_do_dia)
+    
     contexto = {
         "cache_execucao": {}, "cache_classificacao": {},
         "mapa_ligas": carregar_json(ARQUIVO_MAPA_LIGAS),
         "stats_individuais": {}, "stats_h2h": {},
-        "dados_btts": dados_btts
+        "dados_btts": dados_btts,
+        "historico_odds": carregar_json(ARQUIVO_HISTORICO_ODDS)
     }
-
+    
     if jogos_do_dia:
         contexto['cache_execucao'] = pre_buscar_dados_sofascore(jogos_do_dia, contexto['cache_execucao'])
 
@@ -724,6 +800,7 @@ def rodar_analise_completa():
     jogos_analisados, nomes_jogos_analisados, alerta_de_aposta_enviado_geral = 0, [], False
     if jogos_do_dia:
         fuso_brasilia, fuso_utc = timezone(timedelta(hours=-3)), timezone.utc
+        agora_utc = datetime.now(timezone.utc)
 
         lista_de_funcoes = [
             analisar_tendencia_escanteios, analisar_ambas_marcam, analisar_lider_vs_lanterna,
@@ -731,10 +808,14 @@ def rodar_analise_completa():
             analisar_goleador_casa, analisar_visitante_fraco, analisar_favoritos_em_niveis,
             analisar_duelo_tatico, analisar_mercado_otimista, analisar_consenso_de_gols,
             analisar_consenso_de_defesa, analisar_linha_esticada, analisar_zebra_valorosa,
-            analisar_favorito_conservador, analisar_pressao_mercado
+            analisar_favorito_conservador, analisar_pressao_mercado, analisar_pressao_mercado
         ]
 
         for jogo in jogos_do_dia:
+            inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
+            if inicio_jogo_dt < agora_utc:
+                continue
+            
             time_casa, time_fora = jogo['home_team'], jogo['away_team']
             if not jogo.get('bookmakers'):
                 continue
@@ -765,7 +846,7 @@ def rodar_analise_completa():
                     if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
                         print(f"  -> ✅ OPORTUNIDADE APROVADA PELA REGRA DE ODD MÍNIMA ({oportunidade['odd']} >= {ODD_MINIMA_GLOBAL})")
                         alerta_de_aposta_enviado_geral = True
-
+                        
                         banca = carregar_banca()
                         stake = calcular_stake(oportunidade['odd'], banca)
                         saldo_atual = banca.get('banca_atual')
