@@ -1,50 +1,105 @@
-# Nome do seu fluxo de trabalho, que aparece na aba "Actions" do GitHub
-name: Rodar Falcão da ODDS
+on: 
 
-on:
-  # Gatilho para rodar automaticamente
-  schedule:
-    # Esta configuração roda o bot a cada 4 horas.
-    - cron: '0 */4 * * *'
-  
-  # Gatilho para permitir que você rode o bot manualmente pela interface do GitHub
-  workflow_dispatch:
+   schedule: 
 
-# Permissões necessárias para que a ação possa salvar os arquivos de estado do bot.
-permissions:
-  contents: write
+     # Roda a cada 4 horas 
 
-jobs:
-  run-falcao:
-    # A máquina virtual que será usada.
-    runs-on: ubuntu-latest
-    
-    steps:
-    # Cada passo executa uma tarefa específica.
-    - name: 1. Baixar o código
-      uses: actions/checkout@v4
+     - cron: '0 */4 * * *' 
 
-    - name: 2. Configurar Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+   workflow_dispatch: 
 
-    - name: 3. Instalar dependências
-      run: pip install -r requirements.txt
-      
-    - name: 4. Executar o Falcão da ODDS
-      env:
-        # Carrega as suas chaves secretas para o script poder usar.
-        API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
-        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      # --- ESTA É A LINHA CORRIGIDA ---
-      # Indica a pasta correta onde o script "main.py" está.
-      run: python bot-trade-esportivo/main.py
-      
-    - name: 5. Salvar estado do bot (apostas, resultados, etc)
-      run: |
-        git config --global user.name 'GitHub Actions Bot'
-        git config --global user.email 'github-actions@github.com'
-        git add .
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
+
+
+ permissions: 
+
+   contents: write 
+
+
+
+ jobs: 
+
+   run-falcao: 
+
+     runs-on: ubuntu-latest 
+
+      
+
+     steps: 
+
+     - name: 1. Baixar o código 
+
+       uses: actions/checkout@v4 
+
+
+
+     - name: 2. Configurar Python 
+
+       uses: actions/setup-python@v4 
+
+       with:
+
+python-version: '3.10'
+
+
+
+
+
+
+
+    - name: 3. Instalar dependências
+
+
+
+      run: pip install -r requirements.txt
+
+
+
+      
+
+
+
+    - name: 4. Executar o Falcão da ODDS
+
+
+
+      env:
+
+
+
+        API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
+
+
+
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+
+
+
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+
+
+      run: python main.py
+
+
+
+   - name: 5. Salvar estado do bot (apostas, resultados, etc)
+
+
+
+      run: |
+
+
+
+        git config --global user.name 'GitHub Actions Bot'
+
+
+
+        git config --global user.email 'github-actions@github.com'
+
+
+
+        git add .
+
+
+
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
