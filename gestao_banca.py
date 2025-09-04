@@ -89,5 +89,5 @@ def registrar_resultado(aposta, resultado_final, placar_casa, placar_fora):
         f"*📊 Lucro/Prejuízo:* {sinal_lucro}R$ {lucro_ou_prejuizo:.2f}",
         f"*🏦 Saldo Atual:* R$ {banca['banca_atual']:.2f}"
     ]
-    return "\\n".join(linhas_mensagem)
+    return "\n".join(linhas_mensagem)
 
