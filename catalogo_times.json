@@ -3668,5 +3668,61 @@
             "country": "Paraguay",
             "name_api_football": "Paraguay"
         }
+    ],
+    "Azerbaijan": [
+        {
+            "id": 1096,
+            "country": "Azerbaijan",
+            "name_api_football": "Azerbaijan"
+        }
+    ],
+    "Belarus": [
+        {
+            "id": 1100,
+            "country": "Belarus",
+            "name_api_football": "Belarus"
+        }
+    ],
+    "Brazil": [
+        {
+            "id": 6,
+            "country": "Brazil",
+            "name_api_football": "Brazil"
+        }
+    ],
+    "Chile": [
+        {
+            "id": 2383,
+            "country": "Chile",
+            "name_api_football": "Chile"
+        }
+    ],
+    "Greece": [
+        {
+            "id": 1117,
+            "country": "Greece",
+            "name_api_football": "Greece"
+        }
+    ],
+    "Iceland": [
+        {
+            "id": 18,
+            "country": "Iceland",
+            "name_api_football": "Iceland"
+        }
+    ],
+    "Peru": [
+        {
+            "id": 30,
+            "country": "Peru",
+            "name_api_football": "Peru"
+        }
+    ],
+    "Uruguay": [
+        {
+            "id": 7,
+            "country": "Uruguay",
+            "name_api_football": "Uruguay"
+        }
     ]
 }
