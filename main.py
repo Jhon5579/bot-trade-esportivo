@@ -6,6 +6,17 @@ import time
 from thefuzz import fuzz, process
 import pandas as pd
 
+# --- NOVAS IMPORTAÇÕES DOS NOSSOS MÓDULOS ---
+# Importa as ferramentas de gestão de banca do novo ficheiro
+from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
+# Importa as ferramentas da Sofascore do outro ficheiro
+from sofascore_utils import (
+    consultar_classificacao_sofascore,
+    consultar_estatisticas_escanteios,
+    consultar_forma_sofascore,
+    buscar_resultado_sofascore
+)
+
 # --- 1. CONFIGURAÇÕES GERAIS ---
 API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
@@ -15,10 +26,8 @@ ARQUIVO_PENDENTES = 'apostas_pendentes.json'
 ARQUIVO_HISTORICO_APOSTAS = 'historico_de_apostas.json'
 ARQUIVO_RESULTADOS_DIA = 'resultados_do_dia.json'
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
-ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
 CASA_ALVO = 'pinnacle'
-ARQUIVO_CACHE_IDS = 'sofascore_id_cache.json'
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
 
 # --- REGRAS GLOBAIS E ESTRATÉGIAS ---
 ODD_MINIMA_GLOBAL = 1.50
@@ -53,9 +62,7 @@ GIGANTE_MIN_ODD_VITORIA = 1.40
 LIDER_VS_LANTERNA_ODD_MIN = 1.40
 LIDER_VS_LANTERNA_POSICAO_MAX_LIDER = 3
 LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA = 3
-
-
-# --- 2. FUNÇÕES DE SUPORTE ---
+#--- 2. FUNÇÕES DE SUPORTE ---#
 
 def carregar_json(caminho_arquivo):
     try:
@@ -65,143 +72,21 @@ def carregar_json(caminho_arquivo):
 def salvar_json(dados, caminho_arquivo):
     with open(caminho_arquivo, 'w', encoding='utf-8') as f: json.dump(dados, f, indent=4, ensure_ascii=False)
 
-def obter_sofascore_id(nome_time, cache_ids):
-    if nome_time in cache_ids:
-        return cache_ids[nome_time]
-
-    # --- LÓGICA ATUALIZADA ---
-    # 1. Carrega o mapa de traduções
-    mapa_sofascore = carregar_json('mapa_nomes_sofascore.json')
-    # 2. Verifica se o nome do time está no mapa. Se estiver, usa a tradução. Senão, usa o original.
-    nome_para_busca = mapa_sofascore.get(nome_time, nome_time)
-
-    # Imprime qual nome está a ser usado para a busca
-    if nome_time != nome_para_busca:
-        print(f"  -> 🔎 [Sofascore] Nome '{nome_time}' traduzido para '{nome_para_busca}' pelo mapa.")
-    print(f"  -> 🔎 [Sofascore] Procurando ID para: '{nome_para_busca}'")
-
-    try:
-        search_url = f"https://api.sofascore.com/api/v1/search/all?q={nome_para_busca}"
-        res = requests.get(search_url, headers=HEADERS, timeout=10)
-        search_data = res.json()
-
-        resultados_times = [r['entity'] for r in search_data.get('results', []) if r.get('type') == 'team' and r['entity'].get('sport', {}).get('name') == 'Football' and r['entity'].get('gender') == 'M']
-
-        if not resultados_times:
-            print(f"       -> Falha: Nenhum time de futebol masculino encontrado para '{nome_para_busca}'")
-            return None
-
-        nomes_encontrados = {time['name']: time['id'] for time in resultados_times}
-        melhor_match = process.extractOne(nome_para_busca, nomes_encontrados.keys())
-
-        if not melhor_match or melhor_match[1] < 85:
-            print(f"       -> Falha: Melhor correspondência para '{nome_para_busca}' foi fraca.")
-            return None
-
-        time_id = nomes_encontrados[melhor_match[0]]
-        # Salva o ID com o nome original para o cache funcionar corretamente
-        cache_ids[nome_time] = time_id
-        salvar_json(cache_ids, ARQUIVO_CACHE_IDS)
-        time.sleep(1)
-        return time_id
-    except Exception as e:
-        print(f"       -> Exceção ao buscar ID: {e}")
-        return None
-
-def consultar_estatisticas_escanteios(time_id, cache_execucao):
-    cache_key = f"cantos_{time_id}"
-    if cache_key in cache_execucao:
-        return cache_execucao[cache_key]
-
-    print(f"  -> 📊 [Sofascore] Buscando estatísticas de escanteios para o time ID: {time_id}")
-    try:
-        events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/0"
-        res = requests.get(events_url, headers=HEADERS, timeout=10)
-        eventos = res.json().get('events', [])
-
-        lista_total_cantos = []
-        jogos_analisados = 0
-
-        for evento in eventos:
-            if jogos_analisados >= CANTOS_NUM_JOGOS_ANALISE:
-                break
-            if evento.get('status', {}).get('code') != 100:
-                continue
-
-            id_partida = evento['id']
-            stats_url = f"https://api.sofascore.com/api/v1/event/{id_partida}/statistics"
-            time.sleep(1.5)
-            res_stats = requests.get(stats_url, headers=HEADERS, timeout=10)
-
-            if res_stats.status_code != 200:
-                continue
-
-            dados_stats = res_stats.json().get('statistics', [])
-            for grupo in dados_stats:
-                if grupo.get('period') == 'ALL' and grupo.get('groups'):
-                    for subgrupo in grupo['groups']:
-                        if subgrupo.get('groupName') == 'Corners':
-                            total_cantos_partida = sum(int(item.get('value', 0)) for item in subgrupo.get('statisticsItems', []))
-                            lista_total_cantos.append(total_cantos_partida)
-                            jogos_analisados += 1
-                            break
-                    break
-
-        if not lista_total_cantos:
-            print(f"       -> Não foram encontrados dados de escanteios.")
-            cache_execucao[cache_key] = None
-            return None
-
-        media_cantos = sum(lista_total_cantos) / len(lista_total_cantos)
-        print(f"       -> Média de {media_cantos:.2f} cantos/jogo nos últimos {len(lista_total_cantos)} jogos.")
-        cache_execucao[cache_key] = media_cantos
-        return media_cantos
-
-    except Exception as e:
-        print(f"       -> Exceção ao buscar estatísticas de cantos: {e}")
-        cache_execucao[cache_key] = None
-        return None
-
-def consultar_forma_sofascore(nome_time, cache_execucao, num_jogos=6, apenas_id=False):
-    if nome_time in cache_execucao and not apenas_id: return cache_execucao[nome_time]
-
-    time_id = obter_sofascore_id(nome_time, carregar_json(ARQUIVO_CACHE_IDS))
-
-    if not time_id:
-        print(f"       -> Falha: Não foi possível encontrar o ID do time '{nome_time}' para consultar a forma.")
-        return None
-
-    if apenas_id: return None
-
-    try:
-        events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/0"
-        res = requests.get(events_url, headers=HEADERS, timeout=10)
-        events_data = res.json().get('events', [])
-        forma, total_gols_lista = [], []
-        for jogo in events_data[:num_jogos]:
-            if jogo['status']['code'] != 100: continue
-            placar_casa, placar_fora = jogo['homeScore']['current'], jogo['awayScore']['current']
-            total_gols_lista.append(placar_casa + placar_fora)
-            resultado = 'E' if placar_casa == placar_fora else ('V' if (jogo['homeTeam']['id'] == time_id and placar_casa > placar_fora) or (jogo['awayTeam']['id'] == time_id and placar_fora > placar_casa) else 'D')
-            forma.append(resultado)
-        if not forma: return None
-        relatorio_time = {"forma": ''.join(forma[::-1]), "media_gols_partida": sum(total_gols_lista) / len(total_gols_lista)}
-        cache_execucao[nome_time] = relatorio_time
-        return relatorio_time
-    except Exception as e:
-        print(f"       -> Exceção ao consultar forma: {e}")
-        return None
-
 def enviar_alerta_telegram(mensagem):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in caracteres_especiais: mensagem = mensagem.replace(char, f'\\{char}')
-    url, payload = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", {'chat_id': TELEGRAM_CHAT_ID, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
+    for char in caracteres_especiais:
+        mensagem = mensagem.replace(char, f'\\{char}')
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {'chat_id': TELEGRAM_CHAT_ID, 'text': mensagem, 'parse_mode': 'MarkdownV2'}
     try:
         response = requests.post(url, json=payload, timeout=10)
-        if response.status_code == 200: print("  > Mensagem enviada com sucesso para o Telegram!")
-        else: print(f"  > ERRO ao enviar para o Telegram: {response.status_code} - {response.text}")
-    except Exception as e: print(f"  > ERRO de conexão com o Telegram: {e}")
+        if response.status_code == 200:
+            print("  > Mensagem enviada com sucesso para o Telegram!")
+        else:
+            print(f"  > ERRO ao enviar para o Telegram: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"  > ERRO de conexão com o Telegram: {e}")
 
 def calcular_estatisticas_historicas(df):
     if df.empty: return {}, {}
@@ -263,29 +148,58 @@ def extrair_odds_principais(jogo):
         return odds
     except (IndexError, KeyError): return None
 
+def calcular_stake(odd):
+    banca = carregar_json(ARQUIVO_BANCA)
+    if not banca:
+        print(" -> ⚠️ AVISO: Ficheiro 'banca.json' não encontrado. Não é possível calcular a stake.")
+        return 0, 0, 0
 
-# --- 3. FUNÇÕES DAS ESTRATÉGIAS ---
+    banca_inicial = banca.get('banca_inicial', 100.0)
+    banca_atual = banca.get('banca_atual', 100.0)
+    perda_a_recuperar = banca.get('perda_a_recuperar', 0.0)
+    stake_padrao_percentual = banca.get('stake_padrao_percentual', 5.0)
+
+    stake_padrao = banca_inicial * (stake_padrao_percentual / 100.0)
+
+    if perda_a_recuperar == 0:
+        return round(stake_padrao, 2), banca_atual, stake_padrao
+
+    lucro_necessario = perda_a_recuperar + (stake_padrao * (ODD_MINIMA_GLOBAL - 1))
+    odd_calculo = max(odd, ODD_MINIMA_GLOBAL)
+
+    if odd_calculo <= 1.0:
+        return round(stake_padrao, 2), banca_atual, stake_padrao
+
+    stake_necessaria = lucro_necessario / (odd_calculo - 1)
+
+    stake_maxima_recuperacao = stake_padrao * 3
+    stake_final = min(stake_necessaria, stake_maxima_recuperacao)
+
+    return round(stake_final, 2), banca_atual, stake_padrao
+    # --- 3. FUNÇÕES DAS ESTRATÉGIAS ---
+
+def extrair_odds_principais(jogo):
+    try:
+        bookmaker_data = jogo.get('bookmakers', [])[0]['markets']
+        odds = {'h2h': {}, 'totals_1_5': {}, 'totals_2_5': {}, 'totals_3_5': {}}
+        for market in bookmaker_data:
+            if market['key'] == 'h2h': odds['h2h'] = {o['name']: o['price'] for o in market['outcomes']}
+            elif market['key'] == 'totals':
+                point = market['outcomes'][0].get('point')
+                if point == 1.5: odds['totals_1_5'] = {o['name']: o['price'] for o in market['outcomes']}
+                elif point == 2.5: odds['totals_2_5'] = {o['name']: o['price'] for o in market['outcomes']}
+                elif point == 3.5: odds['totals_3_5'] = {o['name']: o['price'] for o in market['outcomes']}
+        return odds
+    except (IndexError, KeyError): return None
 
 def analisar_tendencia_escanteios(jogo, contexto):
     print(f"  -> Analisando tendência de escanteios para: {jogo['home_team']} vs {jogo['away_team']}")
-    cache_ids = carregar_json(ARQUIVO_CACHE_IDS)
-    id_casa = obter_sofascore_id(jogo['home_team'], cache_ids)
-    time.sleep(1)
-    id_fora = obter_sofascore_id(jogo['away_team'], cache_ids)
-
-    if not id_casa or not id_fora:
-        print("       -> Não foi possível obter ID de um dos times. Estratégia cancelada.")
-        return None
-
-    media_cantos_casa = consultar_estatisticas_escanteios(id_casa, contexto['cache_execucao'])
-    media_cantos_fora = consultar_estatisticas_escanteios(id_fora, contexto['cache_execucao'])
-
+    media_cantos_casa = consultar_estatisticas_escanteios(jogo['home_team'], contexto['cache_execucao'], CANTOS_NUM_JOGOS_ANALISE)
+    media_cantos_fora = consultar_estatisticas_escanteios(jogo['away_team'], contexto['cache_execucao'], CANTOS_NUM_JOGOS_ANALISE)
     if not media_cantos_casa or not media_cantos_fora:
         print("       -> Não foi possível calcular a média de escanteios. Estratégia cancelada.")
         return None
-
     media_esperada_jogo = (media_cantos_casa + media_cantos_fora) / 2
-
     if media_esperada_jogo >= CANTOS_MEDIA_MINIMA_TOTAL:
         print(f"  -> ✅ ALERTA DE ESCANTEIOS! Média esperada: {media_esperada_jogo:.2f}")
         motivo = f"Análise estatística indica alta probabilidade de escanteios. A média de cantos nos jogos recentes do mandante é {media_cantos_casa:.2f} e do visitante é {media_cantos_fora:.2f}, resultando numa expectativa de {media_esperada_jogo:.2f} para esta partida."
@@ -303,19 +217,14 @@ def analisar_ambas_marcam(jogo, contexto):
                     if outcome['name'] == 'Yes': odd_btts_sim = outcome['price']; break
     except (IndexError, KeyError): return None
     if not odd_btts_sim: return None
-
     print(f"  -> Jogo pré-qualificado para 'Ambas Marcam': {jogo['home_team']} vs {jogo['away_team']} (Odd: {odd_btts_sim})")
     cache_execucao = contexto['cache_execucao']
     relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao); time.sleep(2)
     relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao); time.sleep(2)
-
-    if relatorio_casa and relatorio_fora and \
-       relatorio_casa.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA and \
-       relatorio_fora.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA:
+    if relatorio_casa and relatorio_fora and        relatorio_casa.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA and        relatorio_fora.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"Ambas as equipas têm um histórico recente de jogos com muitos golos. A média de golos nos últimos jogos do mandante é {relatorio_casa['media_gols_partida']:.2f} e do visitante é {relatorio_fora['media_gols_partida']:.2f}."
         return {"type": "aposta", "mercado": "Ambas as Equipas Marcam - Sim", "odd": odd_btts_sim, "emoji": '⚽', "nome_estrategia": "AMBAS MARCAM (VALIDADO)", "motivo": motivo}
-
     print(f"  -> ❌ [Sofascore] Validação REPROVADA. Médias de golos não atingiram o mínimo.")
     return None
 
@@ -464,10 +373,12 @@ def analisar_favoritos_em_niveis(jogo, contexto):
     if not (nivel and odd_over_1_5 and odd_over_1_5 > ODD_MINIMA_FAVORITO): return None
     print(f"  -> Jogo pré-qualificado para 'Ataque do {nivel}': {nome_favorito}")
     relatorio = consultar_forma_sofascore(nome_favorito, contexto['cache_execucao']); time.sleep(2)
-    if relatorio and relatorio['forma'].count('V') >= 3:
-        print(f"  -> ✅ [Sofascore] Validação APROVADA! Forma: {relatorio['forma']}")
-        motivo = f"O time favorito ({nome_favorito}) está em boa forma recente, com {relatorio['forma'].count('V')} vitórias nos últimos {len(relatorio['forma'])} jogos."
+
+    if relatorio and relatorio['forma'].count('V') >= 3 and relatorio['forma'][-3:].count('V') >= 2:
+        print(f"  -> ✅ [Sofascore] Validação APROVADA! Forma: {relatorio['forma']} (Momento Forte)")
+        motivo = f"O time favorito ({nome_favorito}) está em boa forma geral ({relatorio['forma'].count('V')} vitórias recentes) e em bom momento atual (ganhou {relatorio['forma'][-3:].count('V')} dos últimos 3 jogos)."
         return {"type": "aposta", "mercado": "Mais de 1.5", "odd": odd_over_1_5, "emoji": '👑', "nome_estrategia": f"ATAQUE DO {nivel} (VALIDADO)", "motivo": motivo}
+
     print(f"  -> ❌ [Sofascore] Validação REPROVADA. Forma: {relatorio['forma'] if relatorio else 'N/A'}")
     return None
 
@@ -600,8 +511,7 @@ def analisar_pressao_mercado(jogo, contexto):
         return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🌡️', "nome_estrategia": "PRESSÃO DO MERCADO (VALIDADA)", "motivo": motivo}
     print(f"  -> ❌ [Sofascore] Validação REPROVADA.")
     return None
-
-# --- 4. FUNÇÕES DE ORQUESTRAÇÃO ---
+    # --- 4. FUNÇÕES DE ORQUESTRAÇÃO E GESTÃO DE BANCA ---
 
 def verificar_apostas_pendentes_sofascore():
     print("\n--- 🔍 Verificando resultados de apostas pendentes (via Sofascore)... ---")
@@ -609,15 +519,20 @@ def verificar_apostas_pendentes_sofascore():
     if not apostas_pendentes:
         print("Nenhuma aposta pendente na lista.")
         return
-    apostas_restantes, apostas_concluidas = [], []
+
+    apostas_restantes = []
+    apostas_concluidas = []
+    banca = carregar_banca()
     agora_timestamp = int(datetime.now().timestamp())
+
     for aposta in apostas_pendentes:
         if 'timestamp' in aposta and agora_timestamp > aposta['timestamp'] + (110 * 60):
             resultado_api = buscar_resultado_sofascore(aposta['time_casa'], aposta['time_fora'], aposta['timestamp'])
             if resultado_api and resultado_api != "EM_ANDAMENTO":
                 placar_casa, placar_fora = resultado_api['placar_casa'], resultado_api['placar_fora']
                 total_gols = placar_casa + placar_fora
-                resultado_final, mercado = "", aposta['mercado']
+                resultado_final = ""
+                mercado = aposta['mercado']
 
                 if "Mais de 1.5" in mercado: resultado_final = "GREEN" if total_gols > 1.5 else "RED"
                 elif "Mais de 2.5" in mercado: resultado_final = "GREEN" if total_gols > 2.5 else "RED"
@@ -631,21 +546,18 @@ def verificar_apostas_pendentes_sofascore():
                 if resultado_final:
                     print(f"  -> Resultado encontrado para {aposta['nome_jogo']}: {resultado_final}")
                     aposta['resultado'] = resultado_final
-                    apostas_concluidas.append(aposta)
 
-                    emoji_resultado = "✅" if resultado_final == "GREEN" else "🔴"
-                    mensagem_resultado = (
-                        f"{emoji_resultado} *RESULTADO DA APOSTA* {emoji_resultado}\n\n"
-                        f"*⚽ Jogo:* {aposta['nome_jogo']}\n"
-                        f"*📈 Mercado:* {aposta['mercado']}\n"
-                        f"*🏁 Placar Final:* {placar_casa} x {placar_fora}\n\n"
-                        f"*Resultado:* {resultado_final}"
-                    )
+                    mensagem_resultado = registrar_resultado(aposta, resultado_final, placar_casa, placar_fora)
                     enviar_alerta_telegram(mensagem_resultado)
-                else: apostas_restantes.append(aposta)
-            else: apostas_restantes.append(aposta)
+
+                    apostas_concluidas.append(aposta)
+                else:
+                    apostas_restantes.append(aposta)
+            else:
+                apostas_restantes.append(aposta)
         else:
             apostas_restantes.append(aposta)
+
     salvar_json(apostas_restantes, ARQUIVO_PENDENTES)
     if apostas_concluidas:
         resultados_dia = carregar_json(ARQUIVO_RESULTADOS_DIA)
@@ -673,8 +585,15 @@ def gerar_e_enviar_resumo_diario():
         texto_detalhado = ""
         for estrategia, placar in sorted(placar_estrategias.items()):
             g, r = placar['GREEN'], placar['RED']
-            texto_detalhado += f"*{estrategia}:* {g} ✅ / {r} 🔴\n"
-        resumo_msg = (f"📊 *Resumo de Desempenho - {data_primeiro_resultado.strftime('%d/%m/%Y')}* 📊\n\n*Placar Geral:*\n✅ *GREENs:* {greens}\n🔴 *REDs:* {reds}\n📈 *Assertividade:* {assertividade:.2f}%\n💰 *Total de Entradas:* {total}\n\n--------------------------\n*Desempenho por Estratégia:*\n{texto_detalhado}")
+            texto_detalhado += f"*{estrategia}:* {g} ✅ / {r} 🔴\\n"
+
+        linhas_mensagem = [
+            f"📊 *Resumo de Desempenho - {data_primeiro_resultado.strftime('%d/%m/%Y')}* 📊", "",
+            "*Placar Geral:*", f"✅ *GREENs:* {greens}", f"🔴 *REDs:* {reds}",
+            f"📈 *Assertividade:* {assertividade:.2f}%", f"💰 *Total de Entradas:* {total}", "",
+            "--------------------------", "*Desempenho por Estratégia:*", texto_detalhado
+        ]
+        resumo_msg = "\\n".join(linhas_mensagem)
         enviar_alerta_telegram(resumo_msg)
         historico_completo = carregar_json(ARQUIVO_HISTORICO_APOSTAS)
         historico_completo.extend(resultados_ontem)
@@ -720,10 +639,18 @@ def gerar_e_enviar_resumo_semanal():
     estrategias_ordenadas = sorted(placar_estrategias.items(), key=lambda item: item[1]['GREEN'], reverse=True)
     for estrategia, placar in estrategias_ordenadas:
         g, r = placar['GREEN'], placar['RED']
-        texto_detalhado += f"*{estrategia}:* {g} ✅ / {r} 🔴\n"
+        texto_detalhado += f"*{estrategia}:* {g} ✅ / {r} 🔴\\n"
     data_inicio_str = sete_dias_atras.strftime('%d/%m/%Y')
     data_fim_str = hoje.strftime('%d/%m/%Y')
-    resumo_msg = (f"📊 *Resumo Semanal de Desempenho* 📊\n\n*🗓️ Período:* {data_inicio_str} a {data_fim_str}\n\n*Placar Geral da Semana:*\n✅ *GREENs:* {greens}\n🔴 *REDs:* {reds}\n📈 *Assertividade:* {assertividade:.2f}%\n💰 *Total de Entradas:* {total}\n\n--------------------------\n*Desempenho por Estratégia na Semana:*\n{texto_detalhado}")
+
+    linhas_mensagem = [
+        f"📊 *Resumo Semanal de Desempenho* 📊", "",
+        f"*🗓️ Período:* {data_inicio_str} a {data_fim_str}", "",
+        "*Placar Geral da Semana:*", f"✅ *GREENs:* {greens}", f"🔴 *REDs:* {reds}",
+        f"📈 *Assertividade:* {assertividade:.2f}%", f"💰 *Total de Entradas:* {total}", "",
+        "--------------------------", "*Desempenho por Estratégia na Semana:*", texto_detalhado
+    ]
+    resumo_msg = "\\n".join(linhas_mensagem)
     enviar_alerta_telegram(resumo_msg)
     with open(nome_arquivo_flag, 'w') as f: f.write(str(hoje))
     print(f"✅ Relatório semanal enviado com sucesso! Ficheiro de controlo '{nome_arquivo_flag}' criado.")
@@ -736,7 +663,7 @@ def rodar_analise_completa():
     gerar_e_enviar_resumo_semanal()
     verificar_apostas_pendentes_sofascore()
 
-    print(f"\n--- 🦅 Iniciando busca v15.2 (Falcão Multi-Análise)... ---")
+    print(f"\n--- 🦅 Iniciando busca v15.3 (Falcão com Gestão de Banca)... ---")
 
     url_base = f"https://api.the-odds-api.com/v4/sports/soccer/odds?apiKey={API_KEY_ODDS}&regions=eu,us,uk,au&bookmakers={CASA_ALVO}&oddsFormat=decimal"
     url_jogos_principais = f"{url_base}&markets=h2h,totals"
@@ -813,32 +740,43 @@ def rodar_analise_completa():
                     alerta_de_aposta_enviado_geral = True
                     data_hora = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
 
-                    alerta = (f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*\n\n"
-                              f"*⚽ JOGO:* {time_casa} vs {time_fora}\n"
-                              f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}\n"
-                              f"*🗓️ DATA:* {data_hora}\n\n"
-                              f"*🔍 Análise do Falcão:*\n_{oportunidade['motivo']}_\n\n"
-                              f"*🎯 Ação:* Fique de olho neste jogo para oportunidades ao vivo!")
+                    linhas_alerta = [
+                        f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*", "",
+                        f"*⚽ JOGO:* {time_casa} vs {time_fora}", f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}", f"*🗓️ DATA:* {data_hora}", "",
+                        "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_", "",
+                        "*🎯 Ação:* Fique de olho neste jogo para oportunidades ao vivo!"
+                    ]
+                    alerta = "\\n".join(linhas_alerta)
                     enviar_alerta_telegram(alerta)
 
                 elif oportunidade.get('type') == 'aposta':
                     if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
                         print(f"  -> ✅ OPORTUNIDADE APROVADA PELA REGRA DE ODD MÍNIMA ({oportunidade['odd']} >= {ODD_MINIMA_GLOBAL})")
                         alerta_de_aposta_enviado_geral = True
+
+                        stake, saldo_atual = calcular_stake(oportunidade['odd'])
+
                         data_hora = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
                         mercado_str = oportunidade['mercado']
                         if "Mais de" in mercado_str or "Menos de" in mercado_str: mercado_str += " Gols"
 
-                        alerta = (f"*{oportunidade['emoji']} ENTRADA VALIDADA ({oportunidade['nome_estrategia']}) {oportunidade['emoji']}*\n\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}\n*🗓️ DATA:* {data_hora}\n\n*📈 MERCADO:* {mercado_str}\n*📊 ODD ENCONTRADA:* *{oportunidade['odd']}*")
+                        linhas_alerta = [
+                            f"*{oportunidade['emoji']} ENTRADA VALIDADA ({oportunidade['nome_estrategia']}) {oportunidade['emoji']}*", "",
+                            f"*⚽ JOGO:* {time_casa} vs {time_fora}", f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}", f"*🗓️ DATA:* {data_hora}", "",
+                            f"*📈 MERCADO:* {mercado_str}", f"*📊 ODD ENCONTRADA:* *{oportunidade['odd']}*", f"*💰 STAKE SUGERIDA:* *R$ {stake:.2f}*", "",
+                            f"*🏦 Saldo Pré-Aposta:* R$ {saldo_atual:.2f}"
+                        ]
                         if 'motivo' in oportunidade and oportunidade['motivo']:
-                            alerta += f"\n\n*🔍 Análise do Falcão:*\n_{oportunidade['motivo']}_"
+                            linhas_alerta.extend(["", "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_"])
+
+                        alerta = "\\n".join(linhas_alerta)
                         enviar_alerta_telegram(alerta)
 
                         timestamp_utc = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00')).replace(tzinfo=fuso_utc).timestamp()
                         nova_aposta = {
                             "id_api": jogo['id'], "nome_jogo": f"{time_casa} vs {time_fora}", "time_casa": time_casa,
                             "time_fora": time_fora, "mercado": oportunidade['mercado'], "timestamp": int(timestamp_utc),
-                            "estrategia": oportunidade['nome_estrategia']
+                            "estrategia": oportunidade['nome_estrategia'], "odd": oportunidade['odd'], "stake": stake
                         }
                         apostas_pendentes = carregar_json(ARQUIVO_PENDENTES)
                         apostas_pendentes.append(nova_aposta)
@@ -852,14 +790,15 @@ def rodar_analise_completa():
         jogos_texto = "\n".join(nomes_jogos_analisados[:15])
         if len(nomes_jogos_analisados) > 15: jogos_texto += f"\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
         total_pendentes = len(carregar_json(ARQUIVO_PENDENTES))
-        mensagem_status = (f"🦅 *Relatório do Falcão da ODDS (v15.2)*\n\n🗓️ *Data:* {data_hoje_str}\n-----------------------------------\n\n🔍 *Resumo:*\n- Verifiquei e processei resultados antigos.\n- Analisei *{jogos_analisados}* jogos com o arsenal completo de estratégias.\n- Atualmente, há *{total_pendentes}* apostas em aberto.\n\n🚫 *Resultado:*\nNenhuma oportunidade de alta qualidade encontrada neste ciclo.\n\n🗒️ *Jogos Verificados:*\n{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}\n\nContinuo monitorando! 🕵️‍♂️")
+        mensagem_status = (f"🦅 *Relatório do Falcão da ODDS (v15.2)*\n\n🗓️ *Data:* {data_hoje_str}\n-----------------------------------\n\n🔍 *Resumo:*\n- Verifiquei e processei resultados antigos.\n- Analisei *{jogos_analisados}* jogos com o arsenal completo de estratégias.\n- Atualmente, há *{total_pendentes}* apostas em aberto.\n\n🚫 *Resultado:*\nNenhuma oportunidade de alta qualidade encontrada neste ciclo.\n\n🗒️ *Jogos Verificados:*\n{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}\n\nContinuo monitorando 🕵️‍♂️")
         print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
         enviar_alerta_telegram(mensagem_status)
 
 
+
 # --- 6. PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot (v15.2 Falcão Multi-Análise) ---")
+    print("--- Iniciando execução única do bot (v15.3 com Gestão de Banca) ---")
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
