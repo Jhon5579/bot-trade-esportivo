@@ -82,4 +82,10 @@ GIGANTE_MIN_ODD_VITORIA = 1.40
 # Estratégia: Líder vs Lanterna (Vitória do Líder)
 LIDER_VS_LANTERNA_ODD_MIN = 1.40
 LIDER_VS_LANTERNA_POSICAO_MAX_LIDER = 3
-LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA = 3 # Posições a contar do fim da tabela (ex: os 3 últimos)
+LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA = 3
+
+# --- NOVA ESTRATÉGIA: PRESSÃO DO MERCADO (QUEDA DE ODD) ---
+PRESSAO_MERCADO_MIN_ODD_DROP_PERCENT = 15.0  # A odd precisa cair no mínimo 15%
+PRESSAO_MERCADO_OPENING_ODD_MIN = 1.70      # A odd inicial tinha que ser no mínimo 1.70
+PRESSAO_MERCADO_OPENING_ODD_MAX = 2.50      # A odd inicial tinha que ser no máximo 2.50
+PRESSAO_MERCADO_CURRENT_ODD_MAX = 1.90      # A odd atual do favorito não pode ser maior que 1.90
