@@ -4,61 +4,47 @@ name: Rodar Falcão da ODDS
 on:
   # Gatilho para rodar automaticamente
   schedule:
-    # "cron" é a sintaxe para agendamento. Esta configuração roda o bot
-    # no minuto 0, a cada 4 horas, todos os dias. (00:00, 04:00, 08:00, etc.)
+    # Esta configuração roda o bot a cada 4 horas.
     - cron: '0 */4 * * *'
   
   # Gatilho para permitir que você rode o bot manualmente pela interface do GitHub
   workflow_dispatch:
 
-# Permissões necessárias para o fluxo de trabalho.
-# "contents: write" é essencial para que a ação possa salvar (fazer commit e push)
-# os arquivos de estado do bot (banca, apostas pendentes, etc.) de volta para o repositório.
+# Permissões necessárias para que a ação possa salvar os arquivos de estado do bot.
 permissions:
   contents: write
 
 jobs:
-  # Nome do "trabalho" que será executado. Você pode ter vários trabalhos em um workflow.
   run-falcao:
-    # A máquina virtual que será usada. "ubuntu-latest" é a padrão e recomendada.
+    # A máquina virtual que será usada.
     runs-on: ubuntu-latest
     
     steps:
     # Cada passo executa uma tarefa específica.
     - name: 1. Baixar o código
-      # Esta ação oficial do GitHub baixa o código do seu repositório para a máquina virtual.
       uses: actions/checkout@v4
 
     - name: 2. Configurar Python
-      # Esta ação configura a versão do Python que você quer usar.
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
     - name: 3. Instalar dependências
-      # Este comando lê o seu arquivo "requisitos.txt" e instala todas as bibliotecas.
       run: pip install -r requirements.txt
       
     - name: 4. Executar o Falcão da ODDS
       env:
-        # Aqui, as suas chaves secretas do GitHub são carregadas como variáveis de ambiente
-        # para que o seu script Python possa acessá-las de forma segura.
+        # Carrega as suas chaves secretas para o script poder usar.
         API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      # --- ESTA É A LINHA QUE FOI CORRIGIDA ---
-      # Adicionamos "bot-trade-esportivo/" antes de "main.py" para indicar
-      # a pasta correta onde o seu script principal está localizado.
+      # --- ESTA É A LINHA CORRIGIDA ---
+      # Indica a pasta correta onde o script "main.py" está.
       run: python bot-trade-esportivo/main.py
       
     - name: 5. Salvar estado do bot (apostas, resultados, etc)
-      # Este passo é crucial para a persistência dos dados do seu bot.
       run: |
-        # Configura o nome e e-mail do autor do commit como "GitHub Actions"
         git config --global user.name 'GitHub Actions Bot'
         git config --global user.email 'github-actions@github.com'
-        # Adiciona todos os arquivos que foram modificados pelo bot (ex: gestao_banca.json)
         git add .
-        # Verifica se houve alguma alteração. Se sim, faz o commit e o push.
-        # Se não houver alterações, não faz nada para evitar commits vazios.
         git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
