@@ -3724,5 +3724,68 @@
             "country": "Uruguay",
             "name_api_football": "Uruguay"
         }
+    ],
+    "Croatia": [
+        {
+            "id": 3,
+            "country": "Croatia",
+            "name_api_football": "Croatia"
+        }
+    ],
+    "Denmark": [
+        {
+            "id": 21,
+            "country": "Denmark",
+            "name_api_football": "Denmark"
+        }
+    ],
+    "Estonia": [
+        {
+            "id": 1101,
+            "country": "Estonia",
+            "name_api_football": "Estonia"
+        }
+    ],
+    "Faroe Islands": [
+        {
+            "id": 1098,
+            "country": "Faroe-Islands",
+            "name_api_football": "Faroe Islands"
+        }
+    ],
+    "France": [
+        {
+            "id": 2,
+            "country": "France",
+            "name_api_football": "France"
+        }
+    ],
+    "Italy": [
+        {
+            "id": 768,
+            "country": "Italy",
+            "name_api_football": "Italy"
+        }
+    ],
+    "Montenegro": [
+        {
+            "id": 1109,
+            "country": "Montenegro",
+            "name_api_football": "Montenegro"
+        }
+    ],
+    "Scotland": [
+        {
+            "id": 1108,
+            "country": "Scotland",
+            "name_api_football": "Scotland"
+        }
+    ],
+    "Ukraine": [
+        {
+            "id": 772,
+            "country": "Ukraine",
+            "name_api_football": "Ukraine"
+        }
     ]
 }
