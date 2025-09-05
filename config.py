@@ -6,7 +6,7 @@ Arquivo central de configurações e parâmetros para todas as estratégias do b
 # --- PARÂMETROS GLOBAIS ---
 ODD_MINIMA_GLOBAL = 1.50
 DIA_DO_RELATORIO_SEMANAL = 6  # 0=Segunda, 6=Domingo
-MIN_JOGOS_HISTORICO = 6
+MIN_JOGOS_HISTORICO = 5
 MIN_JOGOS_H2H = 3
 
 # --- PARÂMETROS POR ESTRATÉGIA ---
@@ -14,7 +14,7 @@ MIN_JOGOS_H2H = 3
 # Estratégia: Ambas Marcam (BTTS)
 BTTS_MIN_AVG_GOLS_PARTIDA = 2.8
 
-# Estratégia: Escanteios (Cantos)
+# Estratégia: Escanteios (Cantos) - Baseado em dados recentes do SofaScore
 CANTOS_NUM_JOGOS_ANALISE = 8
 CANTOS_MEDIA_MINIMA_TOTAL = 10.5
 
@@ -54,7 +54,7 @@ ZEBRA_VALOROSA_EMPATE_MAX_ODD = 5.00
 FAVORITO_CONSERVADOR_MAX_ODD = 1.50
 FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD = 1.30
 
-# Estratégia: Pressão do Mercado (Over 2.5)
+# Estratégia: Pressão do Mercado (Over 2.5) - Nome antigo, manter se quiser
 PRESSAO_MERCADO_OVER_2_5_MIN_ODD = 1.70
 PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.85
 
@@ -84,8 +84,24 @@ LIDER_VS_LANTERNA_ODD_MIN = 1.40
 LIDER_VS_LANTERNA_POSICAO_MAX_LIDER = 3
 LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA = 3
 
-# --- NOVA ESTRATÉGIA: PRESSÃO DO MERCADO (QUEDA DE ODD) ---
-PRESSAO_MERCADO_MIN_ODD_DROP_PERCENT = 15.0  # A odd precisa cair no mínimo 15%
-PRESSAO_MERCADO_OPENING_ODD_MIN = 1.70      # A odd inicial tinha que ser no mínimo 1.70
-PRESSAO_MERCADO_OPENING_ODD_MAX = 2.50      # A odd inicial tinha que ser no máximo 2.50
-PRESSAO_MERCADO_CURRENT_ODD_MAX = 1.90      # A odd atual do favorito não pode ser maior que 1.90
+# Estratégia: Pressão do Mercado (Queda de Odd)
+PRESSAO_MERCADO_MIN_ODD_DROP_PERCENT = 15.0
+PRESSAO_MERCADO_OPENING_ODD_MIN = 1.70
+PRESSAO_MERCADO_OPENING_ODD_MAX = 2.50
+PRESSAO_MERCADO_CURRENT_ODD_MAX = 1.90
+
+# --- NOVAS ESTRATÉGIAS BASEADAS EM DADOS HISTÓRICOS DETALHADOS ---
+
+# Estratégia: Domínio em Cantos (Gera um ALERTA)
+CANTOS_HISTORICO_MIN_AVG_PRO = 6.0
+CANTOS_HISTORICO_MIN_AVG_CONTRA = 5.0
+CANTOS_HISTORICO_MIN_SUM_GERAL = 11.0
+
+# Estratégia: Pressão Ofensiva (Faz uma APOSTA em Over 2.5)
+PRESSAO_OFENSIVA_MIN_REMATES_PRO = 10.0
+PRESSAO_OFENSIVA_MIN_REMATES_ALVO_PRO = 4.0
+PRESSAO_OFENSIVA_MIN_ODD_OVER_2_5 = 1.50
+
+# Estratégia: Jogo Agressivo (Gera um ALERTA de cartões)
+CARTOES_MIN_AVG_EQUIPA = 2.2
+CARTOES_MIN_AVG_JOGO_SUM = 5.0
