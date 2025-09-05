@@ -2,7 +2,12 @@ name: Rodar Falcão da ODDS
 
 on:
   schedule:
-  - cron: '0 */3 * * *'
+    # --- LINHAS ALTERADAS ---
+    # Roda a cada hora, das 8h às 23h
+    - cron: '0 8-23 * * *'
+    # Roda também à meia-noite (00:00)
+    - cron: '0 0 * * *'
+  
   workflow_dispatch:
 
 permissions:
@@ -29,14 +34,11 @@ jobs:
         API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }} 
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      # --- VERSÃO FINAL CORRIGIDA ---
-      # Como a depuração mostrou que os arquivos estão na pasta principal,
-      # o comando correto é o mais simples.
       run: python main.py
       
     - name: 5. Salvar estado do bot (apostas, resultados, etc)
       run: |
         git config --global user.name 'GitHub Actions Bot'
-        git config --global user.email 'github-actions@github.com'
+        git config --global user.email 'github.com'
         git add .
         git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
