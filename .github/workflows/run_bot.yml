@@ -2,9 +2,9 @@ name: Rodar Falcão da ODDS
 
 on:
   schedule:
-    # --- LINHAS ALTERADAS ---
-    # Roda a cada hora, das 8h às 23h
-    - cron: '0 8-23 * * *'
+    # --- NOVAS REGRAS DE AGENDAMENTO ---
+    # Roda no minuto 0, a cada 2 horas, entre as 8h e as 22h
+    - cron: '0 8-22/2 * * *'
     # Roda também à meia-noite (00:00)
     - cron: '0 0 * * *'
   
@@ -39,6 +39,6 @@ jobs:
     - name: 5. Salvar estado do bot (apostas, resultados, etc)
       run: |
         git config --global user.name 'GitHub Actions Bot'
-        git config --global user.email 'github.com'
+        git config --global user.email 'github-actions@github.com'
         git add .
         git diff --quiet && git diff --staged --quiet || (git commit -m "Atualização automática do estado do bot"; git push)
