@@ -1073,7 +1073,17 @@ def rodar_analise_completa():
 
 # --- 6. PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot ---")
+    print("--- Iniciando execução única do bot (v15.3 com Gestão de Banca) ---")
+    if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
+        print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
+    else:
+        rodar_analise_completa()
+    print("--- Execução finalizada com sucesso. ---")
+
+
+# --- 6. PONTO DE ENTRADA ---
+if __name__ == "__main__":
+    print("--- Iniciando execução única do bot (v15.3 com Gestão de Banca) ---")
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
