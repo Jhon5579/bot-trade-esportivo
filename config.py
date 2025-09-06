@@ -5,8 +5,8 @@ Arquivo central de configurações e parâmetros para todas as estratégias do b
 
 # --- PARÂMETROS GLOBAIS ---
 ODD_MINIMA_GLOBAL = 1.50
-DIA_DO_RELATORIO_SEMANAL = 6  # 0=Segunda, 6=Domingo
-MIN_JOGOS_HISTORICO = 5
+DIA_DO_RELATORIO_SEMANAL = 6
+MIN_JOGOS_HISTORICO = 6
 MIN_JOGOS_H2H = 3
 
 # --- PARÂMETROS POR ESTRATÉGIA ---
@@ -21,11 +21,12 @@ CANTOS_MEDIA_MINIMA_TOTAL = 10.5
 # Estratégia: Favoritos em Níveis (Super Favorito / Favorito)
 SUPER_FAVORITO_MAX_ODD = 1.50
 FAVORITO_MAX_ODD = 1.65
-ODD_MINIMA_FAVORITO = 1.30 # Usada para o mercado de Over 1.5
+ODD_MINIMA_FAVORITO = 1.30
 
+# --- ESTRATÉGIA DESATIVADA (DEU PREJUÍZO NO BACKTEST) ---
 # Estratégia: Duelo Tático (Under)
-JOGO_EQUILIBRADO_MIN_ODD = 3.00
-ODD_MINIMA_UNDER_Tatico = 2.00
+# JOGO_EQUILIBRADO_MIN_ODD = 2.40
+# ODD_MINIMA_UNDER_Tatico = 1.80
 
 # Estratégia: Mercado Otimista (Over)
 MERCADO_OTIMISTA_MAX_ODD = 1.60
@@ -54,7 +55,7 @@ ZEBRA_VALOROSA_EMPATE_MAX_ODD = 5.00
 FAVORITO_CONSERVADOR_MAX_ODD = 1.50
 FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD = 1.30
 
-# Estratégia: Pressão do Mercado (Over 2.5) - Nome antigo, manter se quiser
+# Estratégia: Pressão do Mercado (Over 2.5)
 PRESSAO_MERCADO_OVER_2_5_MIN_ODD = 1.70
 PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.85
 
@@ -62,10 +63,16 @@ PRESSAO_MERCADO_OVER_2_5_MAX_ODD = 1.85
 GOLEADOR_CASA_MIN_AVG_GOLS = 1.70
 GOLEADOR_CASA_MIN_ODD_OVER_1_5 = 1.30
 
-# Estratégia: Visitante Fraco (Vitória do Casa)
+# --- ESTRATÉGIAS VENCEDORAS OTIMIZADAS POR VOCÊ ---
+# Estratégia: Visitante Fraco (Aposta na vitória do Casa)
 VISITANTE_FRACO_MIN_PERC_DERROTAS = 50.0
 VISITANTE_FRACO_ODD_CASA_MIN = 1.40
 VISITANTE_FRACO_ODD_CASA_MAX = 4.00
+
+# Estratégia: Mandante Fraco (Aposta na vitória do Visitante)
+MANDANTE_FRACO_MIN_PERC_DERROTAS_CASA = 40.0
+MANDANTE_FRACO_ODD_FORA_MIN = 1.50
+MANDANTE_FRACO_ODD_FORA_MAX = 3.00
 
 # Estratégia: Clássico de Gols (Over 2.5 H2H)
 CLASSICO_GOLS_MIN_AVG = 3.0
@@ -106,7 +113,9 @@ PRESSAO_OFENSIVA_MIN_ODD_OVER_2_5 = 1.50
 CARTOES_MIN_AVG_EQUIPA = 2.2
 CARTOES_MIN_AVG_JOGO_SUM = 5.0
 
-# Estratégia: Mandante Fraco (Aposta na vitória do Visitante)
-MANDANTE_FRACO_MIN_PERC_DERROTAS_CASA = 40.0 # Mandante perde pelo menos 50% dos jogos em casa
-MANDANTE_FRACO_ODD_FORA_MIN = 1.50
-MANDANTE_FRACO_ODD_FORA_MAX = 3.00
+# --- PARÂMETROS RE-ADICIONADOS PARA CORRIGIR O ERRO ---
+# Estratégia: Pressão Ofensiva Extrema (APOSTA em Over 2.5 com Odds Baixas)
+PRESSAO_EXTREMA_MIN_REMATES_PRO = 16.0
+PRESSAO_EXTREMA_MIN_REMATES_ALVO_PRO = 5.5
+PRESSAO_EXTREMA_ODD_MIN = 1.40
+PRESSAO_EXTREMA_ODD_MAX = 1.50
