@@ -652,8 +652,7 @@ def analisar_pressao_ofensiva_extrema(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
     stats_casa = stats_individuais.get(time_casa)
-    stats_fora = stats_individuais.get(time_fora)
-    if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
+    if not stats_casa or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
         return None
     condicao_remates_casa = stats_casa.get('avg_remates_pro_casa', 0) >= PRESSAO_EXTREMA_MIN_REMATES_PRO
     condicao_remates_alvo_casa = stats_casa.get('avg_remates_alvo_pro_casa', 0) >= PRESSAO_EXTREMA_MIN_REMATES_ALVO_PRO
@@ -872,8 +871,13 @@ def rodar_analise_completa():
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado. Estratégias históricas desativadas.")
 
-    jogos_analisados, nomes_jogos_analisados, alertas_enviados_neste_ciclo = 0, [], 0
+    jogos_analisados = 0
+    nomes_jogos_analisados = []
     apostas_feitas_neste_ciclo = []
+    alertas_enviados_neste_ciclo = 0
+    
+    apostas_pendentes_atuais = carregar_json(ARQUIVO_PENDENTES)
+    ids_apostas_pendentes = {aposta['id_api'] for aposta in apostas_pendentes_atuais}
     
     if jogos_do_dia:
         fuso_brasilia, fuso_utc = timezone(timedelta(hours=-3)), timezone.utc
@@ -892,6 +896,10 @@ def rodar_analise_completa():
         ]
 
         for jogo in jogos_do_dia:
+            if jogo['id'] in ids_apostas_pendentes:
+                print(f"\n-> Jogo '{jogo['home_team']} vs {jogo['away_team']}' já possui uma aposta pendente. Pulando análise.")
+                continue
+                
             time_casa, time_fora = jogo['home_team'], jogo['away_team']
             if not jogo.get('bookmakers'):
                 continue
@@ -1031,5 +1039,13 @@ if __name__ == "__main__":
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
-        rodar_analise_completa()
-    print("--- Execução finalizada com sucesso. ---")
+        while True:
+            try:
+                rodar_analise_completa()
+                intervalo_de_espera = 3600 # 1 hora
+                print(f"\n--- Ciclo concluído. A aguardar {int(intervalo_de_espera / 60)} minutos até a próxima execução... ---")
+                time.sleep(intervalo_de_espera)
+            except Exception as e:
+                print(f"❌ Ocorreu um erro inesperado no ciclo principal: {e}")
+                print("    A reiniciar o ciclo em 60 segundos...")
+                time.sleep(60)
