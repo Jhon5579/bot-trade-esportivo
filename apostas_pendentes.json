@@ -20,5 +20,16 @@
         "estrategia": "FORTALEZA DEFENSIVA (HISTÓRICO)",
         "odd": 1.86,
         "stake": 5.0
+    },
+    {
+        "id_api": "1bdaac43933a59c7b480a3986b4488f4",
+        "nome_jogo": "Barnet vs Shrewsbury Town",
+        "time_casa": "Barnet",
+        "time_fora": "Shrewsbury Town",
+        "mercado": "Menos de 2.5",
+        "timestamp": 1757167200,
+        "estrategia": "FORTALEZA DEFENSIVA (HISTÓRICO)",
+        "odd": 1.86,
+        "stake": 5.0
     }
 ]
