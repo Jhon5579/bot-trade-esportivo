@@ -54,7 +54,7 @@ def enviar_alerta_telegram(mensagem):
 def calcular_estatisticas_historicas(df):
     if df.empty:
         return {}, {}
-
+        
     cols_stats = ['FTHG', 'FTAG', 'HC', 'AC', 'HS', 'AS', 'HST', 'AST', 'HY', 'AY', 'HR', 'AR']
     for col in cols_stats:
         if col in df.columns:
@@ -81,7 +81,7 @@ def calcular_estatisticas_historicas(df):
         print("  -> ERRO: Falha ao converter a coluna de datas. Verifique o formato no CSV.")
         return {}, {}
     df['Resultado'] = df.apply(lambda r: 'V' if r['FTHG'] > r['FTAG'] else ('E' if r['FTHG'] == r['FTAG'] else 'D'), axis=1)
-
+    
     stats_casa = df.groupby('HomeTeam').agg(
         avg_gols_marcados_casa=('FTHG', 'mean'),
         avg_gols_sofridos_casa=('FTAG', 'mean'),
@@ -95,7 +95,7 @@ def calcular_estatisticas_historicas(df):
         avg_cartoes_vermelhos_pro_casa=('HR', 'mean'),
         total_jogos_casa=('HomeTeam', 'count')
     )
-
+    
     stats_fora = df.groupby('AwayTeam').agg(
         avg_gols_marcados_fora=('FTAG', 'mean'),
         avg_gols_sofridos_fora=('FTHG', 'mean'),
@@ -114,9 +114,9 @@ def calcular_estatisticas_historicas(df):
     derrotas_casa = df[df['Resultado'] == 'D'].groupby('HomeTeam').size().rename('derrotas_casa')
     vitorias_fora = df[df['Resultado'] == 'D'].groupby('AwayTeam').size().rename('vitorias_fora')
     derrotas_fora = df[df['Resultado'] == 'V'].groupby('AwayTeam').size().rename('derrotas_fora')
-
+    
     stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora, derrotas_casa], axis=1).fillna(0).to_dict('index')
-
+    
     for time_nome, stats in stats_individuais.items():
         total_jogos = stats.get('total_jogos_casa', 0) + stats.get('total_jogos_fora', 0)
         total_vitorias = stats.get('vitorias_casa', 0) + stats.get('vitorias_fora', 0)
@@ -126,7 +126,7 @@ def calcular_estatisticas_historicas(df):
             stats['perc_derrotas_fora'] = (stats.get('derrotas_fora', 0) / stats['total_jogos_fora']) * 100
         if stats.get('total_jogos_casa', 0) > 0:
             stats['perc_derrotas_casa'] = (stats.get('derrotas_casa', 0) / stats['total_jogos_casa']) * 100
-
+    
     df_sorted = df.sort_values(by='Date', ascending=False)
     ultimos_jogos = {}
     for index, row in df_sorted.iterrows():
@@ -138,7 +138,7 @@ def calcular_estatisticas_historicas(df):
     for time_nome, resultado in ultimos_jogos.items():
         if time_nome in stats_individuais:
             stats_individuais[time_nome]['resultado_ultimo_jogo'] = resultado
-
+            
     df['TotalGols'] = df['FTHG'] + df['FTAG']
     df['H2H_Key'] = df.apply(lambda row: '|'.join(sorted([str(row['HomeTeam']), str(row['AwayTeam'])])), axis=1)
     stats_h2h = df.groupby('H2H_Key').agg(avg_gols_h2h=('TotalGols', 'mean'), total_jogos_h2h=('H2H_Key', 'count')).to_dict('index')
@@ -170,16 +170,16 @@ def pre_buscar_dados_sofascore(jogos_do_dia, cache_existente):
     for jogo in jogos_do_dia:
         times_unicos.add(jogo['home_team'])
         times_unicos.add(jogo['away_team'])
-
+    
     print(f"  -> Encontrados {len(times_unicos)} times únicos para buscar dados.")
     cache_preenchido = cache_existente.copy()
-
+    
     for i, time_nome in enumerate(list(times_unicos)):
         if time_nome not in cache_preenchido:
             print(f"  -> Buscando dados para: {time_nome} ({i+1}/{len(times_unicos)})")
             consultar_forma_sofascore(time_nome, cache_preenchido)
             time.sleep(2)
-
+    
     print("  -> ✅ Todos os dados de forma do Sofascore foram pré-buscados e estão em cache.")
     return cache_preenchido
 
@@ -195,7 +195,7 @@ def salvar_odds_futuras(jogos_do_dia):
             continue
 
         inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
-
+        
         if (inicio_jogo_dt - agora) > timedelta(hours=22):
             odds = extrair_odds_principais(jogo)
             if odds and odds.get('h2h'):
@@ -206,7 +206,7 @@ def salvar_odds_futuras(jogos_do_dia):
                     "opening_odds": odds['h2h']
                 }
                 novas_odds_salvas += 1
-
+    
     if novas_odds_salvas > 0:
         salvar_json(historico_odds, ARQUIVO_HISTORICO_ODDS)
         print(f"  -> {novas_odds_salvas} novas odds de jogos futuros foram salvas.")
@@ -247,7 +247,10 @@ def analisar_ambas_marcam(jogo, contexto):
     cache_execucao = contexto['cache_execucao']
     relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao)
     relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao)
-    if relatorio_casa and relatorio_fora and relatorio_casa.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA and relatorio_fora.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA:
+    if not relatorio_casa or not relatorio_fora:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
+        return None
+    if relatorio_casa.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA and relatorio_fora.get('media_gols_partida', 0) >= BTTS_MIN_AVG_GOLS_PARTIDA:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"Ambas as equipas têm um histórico recente de jogos com muitos golos. A média de golos nos últimos jogos do mandante é {relatorio_casa['media_gols_partida']:.2f} e do visitante é {relatorio_fora['media_gols_partida']:.2f}."
         return {"type": "aposta", "mercado": "Ambas as Equipas Marcam - Sim", "odd": odd_btts_sim, "emoji": '⚽', "nome_estrategia": "AMBAS MARCAM (VALIDADO)", "motivo": motivo}
@@ -257,30 +260,24 @@ def analisar_ambas_marcam(jogo, contexto):
 def analisar_lider_vs_lanterna(jogo, contexto):
     liga = jogo.get('sport_title')
     mapa_ligas = contexto.get('mapa_ligas', {})
-    if not liga or liga not in mapa_ligas:
-        return None
+    if not liga or liga not in mapa_ligas: return None
     ano_atual_str = str(datetime.now(timezone(timedelta(hours=-3))).year)
     temporada_key = ano_atual_str
     for key in mapa_ligas[liga].get('temporadas', {}):
         if ano_atual_str in key:
             temporada_key = key
             break
-    if temporada_key not in mapa_ligas[liga].get('temporadas', {}):
-        return None
+    if temporada_key not in mapa_ligas[liga].get('temporadas', {}): return None
     id_liga = mapa_ligas[liga]['id_liga']
     id_temporada = mapa_ligas[liga]['temporadas'][temporada_key]
     classificacao = consultar_classificacao_sofascore(id_liga, id_temporada, contexto['cache_classificacao'])
-    if not classificacao or len(classificacao) < 10:
-        return None
+    if not classificacao or len(classificacao) < 10: return None
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
     pos_casa, pos_fora = None, None
     for time_info in classificacao:
-        if time_info['nome'] == time_casa:
-            pos_casa = time_info['posicao']
-        if time_info['nome'] == time_fora:
-            pos_fora = time_info['posicao']
-    if not (pos_casa and pos_fora):
-        return None
+        if time_info['nome'] == time_casa: pos_casa = time_info['posicao']
+        if time_info['nome'] == time_fora: pos_fora = time_info['posicao']
+    if not (pos_casa and pos_fora): return None
     lider, lanterna, mercado, lider_pos, lanterna_pos = None, None, None, None, None
     total_times = len(classificacao)
     posicao_corte_lanterna = total_times - LIDER_VS_LANTERNA_POSICAO_MIN_LANTERNA + 1
@@ -288,12 +285,10 @@ def analisar_lider_vs_lanterna(jogo, contexto):
         lider, lanterna, mercado, lider_pos, lanterna_pos = time_casa, time_fora, f"Resultado Final - {time_casa}", pos_casa, pos_fora
     elif pos_fora <= LIDER_VS_LANTERNA_POSICAO_MAX_LIDER and pos_casa >= posicao_corte_lanterna:
         lider, lanterna, mercado, lider_pos, lanterna_pos = time_fora, time_casa, f"Resultado Final - {time_fora}", pos_fora, pos_casa
-    if not lider:
-        return None
+    if not lider: return None
     print(f"  -> Jogo pré-qualificado para 'Líder vs. Lanterna': {lider} ({lider_pos}º) vs {lanterna} ({lanterna_pos}º)")
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds.get('h2h'):
-        return None
+    if not odds or not odds.get('h2h'): return None
     odd_vitoria_lider = odds['h2h'].get(lider)
     if odd_vitoria_lider and odd_vitoria_lider >= LIDER_VS_LANTERNA_ODD_MIN:
         print(f"  -> ✅ Validação de Odd APROVADA! Odd para {lider} vencer: {odd_vitoria_lider}")
@@ -309,8 +304,7 @@ def analisar_reacao_gigante(jogo, contexto):
         if stats_time and stats_time.get('perc_vitorias_geral', 0) >= GIGANTE_MIN_PERC_VITORIAS and stats_time.get('resultado_ultimo_jogo') == 'D':
             print(f"  -> Jogo pré-qualificado para 'Reação do Gigante': {time_analisado} (Vem de derrota)")
             odds = extrair_odds_principais(jogo)
-            if not odds or not odds.get('h2h'):
-                continue
+            if not odds or not odds.get('h2h'): continue
             odd_vitoria = odds.get('h2h', {}).get(time_analisado)
             if odd_vitoria and odd_vitoria >= GIGANTE_MIN_ODD_VITORIA:
                 print(f"  -> ✅ Validação de Odd APROVADA! Odd para {time_analisado} vencer: {odd_vitoria}")
@@ -324,14 +318,12 @@ def analisar_fortaleza_defensiva(jogo, contexto):
     time_casa = jogo['home_team']
     stats_individuais = contexto['stats_individuais']
     stats_time = stats_individuais.get(time_casa)
-    if not stats_time or stats_time.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
-        return None
+    if not stats_time or stats_time.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO: return None
     avg_gols_sofridos = stats_time.get('avg_gols_sofridos_casa', 99)
     if avg_gols_sofridos <= FORTALEZA_DEFENSIVA_MAX_AVG_GOLS_SOFRIDOS:
         print(f"  -> Jogo pré-qualificado para 'Fortaleza Defensiva': {time_casa} (Média Sofrida: {avg_gols_sofridos:.2f} gols/jogo)")
         odds = extrair_odds_principais(jogo)
-        if not odds:
-            return None
+        if not odds: return None
         odd_under_2_5 = odds.get('totals_2_5', {}).get('Under')
         if odd_under_2_5 and odd_under_2_5 >= FORTALEZA_DEFENSIVA_MIN_ODD_UNDER_2_5:
             print(f"  -> ✅ Validação de Odd APROVADA! Odd Under 2.5: {odd_under_2_5}")
@@ -346,14 +338,12 @@ def analisar_classico_de_gols(jogo, contexto):
     stats_h2h = contexto['stats_h2h']
     h2h_key = '|'.join(sorted([time_casa, time_fora]))
     stats_confronto = stats_h2h.get(h2h_key)
-    if not stats_confronto or stats_confronto.get('total_jogos_h2h', 0) < MIN_JOGOS_H2H:
-        return None
+    if not stats_confronto or stats_confronto.get('total_jogos_h2h', 0) < MIN_JOGOS_H2H: return None
     avg_gols = stats_confronto.get('avg_gols_h2h', 0)
     if avg_gols >= CLASSICO_GOLS_MIN_AVG:
         print(f"  -> Jogo pré-qualificado para 'Clássico de Gols': {time_casa} vs {time_fora} (Média H2H: {avg_gols:.2f} gols)")
         odds = extrair_odds_principais(jogo)
-        if not odds:
-            return None
+        if not odds: return None
         odd_over_2_5 = odds.get('totals_2_5', {}).get('Over')
         if odd_over_2_5 and odd_over_2_5 >= CLASSICO_GOLS_MIN_ODD_OVER_2_5:
             print(f"  -> ✅ Validação de Odd APROVADA! Odd Over 2.5: {odd_over_2_5}")
@@ -367,14 +357,12 @@ def analisar_goleador_casa(jogo, contexto):
     time_casa = jogo['home_team']
     stats_individuais = contexto['stats_individuais']
     stats_time = stats_individuais.get(time_casa)
-    if not stats_time or stats_time.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
-        return None
+    if not stats_time or stats_time.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO: return None
     avg_gols_marcados = stats_time.get('avg_gols_marcados_casa', 0)
     if avg_gols_marcados >= GOLEADOR_CASA_MIN_AVG_GOLS:
         print(f"  -> Jogo pré-qualificado para 'Goleador da Casa': {time_casa} (Média: {avg_gols_marcados:.2f} gols/jogo)")
         odds = extrair_odds_principais(jogo)
-        if not odds:
-            return None
+        if not odds: return None
         odd_over_1_5 = odds.get('totals_1_5', {}).get('Over')
         if odd_over_1_5 and odd_over_1_5 >= GOLEADOR_CASA_MIN_ODD_OVER_1_5:
             print(f"  -> ✅ Validação de Odd APROVADA! Odd Over 1.5: {odd_over_1_5}")
@@ -388,14 +376,12 @@ def analisar_visitante_fraco(jogo, contexto):
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
     stats_individuais = contexto['stats_individuais']
     stats_time_fora = stats_individuais.get(time_fora)
-    if not stats_time_fora or stats_time_fora.get('total_jogos_fora', 0) < MIN_JOGOS_HISTORICO:
-        return None
+    if not stats_time_fora or stats_time_fora.get('total_jogos_fora', 0) < MIN_JOGOS_HISTORICO: return None
     perc_derrotas = stats_time_fora.get('perc_derrotas_fora', 0)
     if perc_derrotas >= VISITANTE_FRACO_MIN_PERC_DERROTAS:
         print(f"  -> Jogo pré-qualificado para 'Visitante Fraco': {time_fora} ({perc_derrotas:.2f}% de derrotas fora)")
         odds = extrair_odds_principais(jogo)
-        if not odds or not odds.get('h2h'):
-            return None
+        if not odds or not odds.get('h2h'): return None
         odd_casa = odds.get('h2h', {}).get(time_casa)
         if odd_casa and VISITANTE_FRACO_ODD_CASA_MIN <= odd_casa <= VISITANTE_FRACO_ODD_CASA_MAX:
             print(f"  -> ✅ Validação de Odd APROVADA! Odd para {time_casa} vencer: {odd_casa}")
@@ -428,39 +414,43 @@ def analisar_mandante_fraco(jogo, contexto):
 
 def analisar_favoritos_em_niveis(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['h2h']:
-        return None
+    if not odds or not odds['h2h']: return None
     odds_h2h = {k: v for k, v in odds['h2h'].items() if k != 'Draw'}
-    if not odds_h2h:
-        return None
+    if not odds_h2h: return None
     nome_favorito, odd_favorito = min(odds_h2h, key=odds_h2h.get), min(odds_h2h.values())
     nivel = "SUPER FAVORITO" if odd_favorito <= SUPER_FAVORITO_MAX_ODD else ("FAVORITO" if odd_favorito <= FAVORITO_MAX_ODD else None)
     odd_over_1_5 = odds.get('totals_1_5', {}).get('Over')
-    if not (nivel and odd_over_1_5 and odd_over_1_5 > ODD_MINIMA_FAVORITO):
-        return None
+    if not (nivel and odd_over_1_5 and odd_over_1_5 > ODD_MINIMA_FAVORITO): return None
     print(f"  -> Jogo pré-qualificado para 'Ataque do {nivel}': {nome_favorito}")
     relatorio = consultar_forma_sofascore(nome_favorito, contexto['cache_execucao'])
-    condicao_forma_geral = relatorio and relatorio['forma'].count('V') >= 3
-    condicao_momento_atual = relatorio and relatorio['forma'][-3:].count('V') >= 2
+    if not relatorio:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma para '{nome_favorito}'.")
+        return None
+    condicao_forma_geral = relatorio['forma'].count('V') >= 3
+    condicao_momento_atual = relatorio['forma'][-3:].count('V') >= 2
     if condicao_forma_geral and condicao_momento_atual:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Forma: {relatorio['forma']} (Momento Forte)")
         motivo = f"O time favorito ({nome_favorito}) está em boa forma geral ({relatorio['forma'].count('V')} vitórias recentes) e em bom momento atual (ganhou {relatorio['forma'][-3:].count('V')} dos últimos 3 jogos)."
         return {"type": "aposta", "mercado": "Mais de 1.5", "odd": odd_over_1_5, "emoji": '👑', "nome_estrategia": f"ATAQUE DO {nivel} (VALIDADO)", "motivo": motivo}
-    print(f"  -> ❌ [Sofascore] Validação REPROVADA. Forma: {relatorio['forma'] if relatorio else 'N/A'}")
+    print(f"  -> ❌ [Sofascore] Validação REPROVADA. Forma: {relatorio['forma']}")
     return None
 
 def analisar_duelo_tatico(jogo, contexto):
+    try:
+        if JOGO_EQUILIBRADO_MIN_ODD is None: return None
+    except NameError:
+        return None
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['h2h'] or not odds['totals_2_5']:
-        return None
+    if not odds or not odds['h2h'] or not odds['totals_2_5']: return None
     odd_casa, odd_fora, odd_under_2_5 = odds['h2h'].get(jogo['home_team']), odds['h2h'].get(jogo['away_team']), odds['totals_2_5'].get('Under')
-    if not (odd_casa and odd_fora and odd_under_2_5 and odd_casa > JOGO_EQUILIBRADO_MIN_ODD and odd_fora > JOGO_EQUILIBRADO_MIN_ODD and odd_under_2_5 > ODD_MINIMA_UNDER_Tatico):
-        return None
+    if not (odd_casa and odd_fora and odd_under_2_5 and odd_casa > JOGO_EQUILIBRADO_MIN_ODD and odd_fora > JOGO_EQUILIBRADO_MIN_ODD and odd_under_2_5 > ODD_MINIMA_UNDER_Tatico): return None
     print(f"  -> Jogo pré-qualificado para 'Duelo Tático': {jogo['home_team']} vs {jogo['away_team']}")
     cache_execucao = contexto['cache_execucao']
-    relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao)
-    relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao)
-    if relatorio_casa and relatorio_fora and relatorio_casa['media_gols_partida'] < 2.6 and relatorio_fora['media_gols_partida'] < 2.6:
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao)
+    if not relatorio_casa or not relatorio_fora:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
+        return None
+    if relatorio_casa['media_gols_partida'] < 2.6 and relatorio_fora['media_gols_partida'] < 2.6:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"Ambas as equipes vêm de jogos com poucos gols. A média de gols recente do time da casa é {relatorio_casa['media_gols_partida']:.2f} e do visitante é {relatorio_fora['media_gols_partida']:.2f}."
         return {"type": "aposta", "mercado": "Menos de 2.5", "odd": odd_under_2_5, "emoji": '♟️', "nome_estrategia": "DUELO TÁTICO (VALIDADO)", "motivo": motivo}
@@ -469,16 +459,16 @@ def analisar_duelo_tatico(jogo, contexto):
 
 def analisar_mercado_otimista(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['totals_1_5'] or not odds['totals_2_5']:
-        return None
+    if not odds or not odds['totals_1_5'] or not odds['totals_2_5']: return None
     odd_over_2_5, odd_over_1_5 = odds['totals_2_5'].get('Over'), odds.get('totals_1_5', {}).get('Over')
-    if not (odd_over_2_5 and odd_over_1_5 and odd_over_2_5 <= MERCADO_OTIMISTA_MAX_ODD and odd_over_1_5 > ODD_MINIMA_OVER_Otimista):
-        return None
+    if not (odd_over_2_5 and odd_over_1_5 and odd_over_2_5 <= MERCADO_OTIMISTA_MAX_ODD and odd_over_1_5 > ODD_MINIMA_OVER_Otimista): return None
     print(f"  -> Jogo pré-qualificado para 'Mercado Otimista': {jogo['home_team']} vs {jogo['away_team']}")
     cache_execucao = contexto['cache_execucao']
-    relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao)
-    relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao)
-    if relatorio_casa and relatorio_fora and relatorio_casa['media_gols_partida'] > 2.7 and relatorio_fora['media_gols_partida'] > 2.7:
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao)
+    if not relatorio_casa or not relatorio_fora:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
+        return None
+    if relatorio_casa['media_gols_partida'] > 2.7 and relatorio_fora['media_gols_partida'] > 2.7:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"Ambas as equipes vêm de jogos com muitos gols. A média de gols recente do time da casa é {relatorio_casa['media_gols_partida']:.2f} e do visitante é {relatorio_fora['media_gols_partida']:.2f}."
         return {"type": "aposta", "mercado": "Mais de 1.5", "odd": odd_over_1_5, "emoji": '📈', "nome_estrategia": "MERCADO OTIMISTA (VALIDADO)", "motivo": motivo}
@@ -487,20 +477,19 @@ def analisar_mercado_otimista(jogo, contexto):
 
 def analisar_consenso_de_gols(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['h2h'] or not odds['totals_2_5']:
-        return None
+    if not odds or not odds['h2h'] or not odds['totals_2_5']: return None
     odds_h2h = {k: v for k, v in odds['h2h'].items() if k != 'Draw'}
-    if not odds_h2h:
-        return None
+    if not odds_h2h: return None
     nome_favorito, odd_favorito = min(odds_h2h, key=odds_h2h.get), min(odds_h2h.values())
     odd_over_2_5 = odds['totals_2_5'].get('Over')
-    if not (odd_favorito <= CONSENSO_FAVORITO_MAX_ODD and odd_over_2_5 and odd_over_2_5 <= CONSENSO_MERCADO_OVER_MAX_ODD and odd_over_2_5 > CONSENSO_OVER_MIN_ODD_VALOR):
-        return None
+    if not (odd_favorito <= CONSENSO_FAVORITO_MAX_ODD and odd_over_2_5 and odd_over_2_5 <= CONSENSO_MERCADO_OVER_MAX_ODD and odd_over_2_5 > CONSENSO_OVER_MIN_ODD_VALOR): return None
     print(f"  -> Jogo pré-qualificado para 'Consenso de Gols': {jogo['home_team']} vs {jogo['away_team']}")
     cache_execucao = contexto['cache_execucao']
-    relatorio_fav = consultar_forma_sofascore(nome_favorito, cache_execucao)
-    relatorio_outro = consultar_forma_sofascore(next(iter(k for k in odds_h2h if k != nome_favorito)), cache_execucao)
-    if relatorio_fav and relatorio_outro and relatorio_fav['forma'].count('V') >= 3 and (relatorio_fav['media_gols_partida'] + relatorio_outro['media_gols_partida']) / 2 > 2.8:
+    relatorio_fav, relatorio_outro = consultar_forma_sofascore(nome_favorito, cache_execucao), consultar_forma_sofascore(next(iter(k for k in odds_h2h if k != nome_favorito)), cache_execucao)
+    if not relatorio_fav or not relatorio_outro:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
+        return None
+    if relatorio_fav['forma'].count('V') >= 3 and (relatorio_fav['media_gols_partida'] + relatorio_outro['media_gols_partida']) / 2 > 2.8:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Forma do Fav: {relatorio_fav['forma']}, Média Gols: {(relatorio_fav['media_gols_partida'] + relatorio_outro['media_gols_partida']) / 2:.2f}")
         motivo = f"O favorito ({nome_favorito}) está em boa forma ({relatorio_fav['forma'].count('V')} vitórias recentes) e a média de gols combinada das equipes é alta ({(relatorio_fav['media_gols_partida'] + relatorio_outro['media_gols_partida']) / 2:.2f})."
         return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🎯', "nome_estrategia": "CONSENSO DE GOLS (VALIDADO)", "motivo": motivo}
@@ -509,16 +498,16 @@ def analisar_consenso_de_gols(jogo, contexto):
 
 def analisar_consenso_de_defesa(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['h2h'] or not odds['totals_2_5']:
-        return None
+    if not odds or not odds['h2h'] or not odds['totals_2_5']: return None
     odd_empate, odd_under_2_5 = odds['h2h'].get('Draw'), odds['totals_2_5'].get('Under')
-    if not (odd_empate and odd_under_2_5 and odd_empate <= CONSENSO_EMPATE_MAX_ODD and odd_under_2_5 <= CONSENSO_MERCADO_UNDER_MAX_ODD and odd_under_2_5 > CONSENSO_UNDER_MIN_ODD_VALOR):
-        return None
+    if not (odd_empate and odd_under_2_5 and odd_empate <= CONSENSO_EMPATE_MAX_ODD and odd_under_2_5 <= CONSENSO_MERCADO_UNDER_MAX_ODD and odd_under_2_5 > CONSENSO_UNDER_MIN_ODD_VALOR): return None
     print(f"  -> Jogo pré-qualificado para 'Consenso de Defesa': {jogo['home_team']} vs {jogo['away_team']}")
     cache_execucao = contexto['cache_execucao']
-    relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao)
-    relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao)
-    if relatorio_casa and relatorio_fora and relatorio_casa['media_gols_partida'] < 2.5 and relatorio_fora['media_gols_partida'] < 2.5:
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao)
+    if not relatorio_casa or not relatorio_fora:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
+        return None
+    if relatorio_casa['media_gols_partida'] < 2.5 and relatorio_fora['media_gols_partida'] < 2.5:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"O mercado aponta para um jogo equilibrado (odd do empate baixa) e as equipes têm uma média de gols recente baixa ({relatorio_casa['media_gols_partida']:.2f} e {relatorio_fora['media_gols_partida']:.2f})."
         return {"type": "aposta", "mercado": "Menos de 2.5", "odd": odd_under_2_5, "emoji": '🛡️', "nome_estrategia": "CONSENSO DE DEFESA (VALIDADO)", "motivo": motivo}
@@ -527,16 +516,16 @@ def analisar_consenso_de_defesa(jogo, contexto):
 
 def analisar_linha_esticada(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['totals_2_5'] or not odds['totals_3_5']:
-        return None
+    if not odds or not odds['totals_2_5'] or not odds['totals_3_5']: return None
     odd_over_2_5, odd_under_3_5 = odds['totals_2_5'].get('Over'), odds['totals_3_5'].get('Under')
-    if not (odd_over_2_5 and odd_under_3_5 and odd_over_2_5 < LINHA_ESTICADA_OVER_2_5_MAX_ODD and odd_under_3_5 > LINHA_ESTICADA_UNDER_3_5_MIN_ODD):
-        return None
+    if not (odd_over_2_5 and odd_under_3_5 and odd_over_2_5 < LINHA_ESTICADA_OVER_2_5_MAX_ODD and odd_under_3_5 > LINHA_ESTICADA_UNDER_3_5_MIN_ODD): return None
     print(f"  -> Jogo pré-qualificado para 'Linha Esticada': {jogo['home_team']} vs {jogo['away_team']}")
     cache_execucao = contexto['cache_execucao']
-    relatorio_casa = consultar_forma_sofascore(jogo['home_team'], cache_execucao)
-    relatorio_fora = consultar_forma_sofascore(jogo['away_team'], cache_execucao)
-    if relatorio_casa and relatorio_fora and relatorio_casa['media_gols_partida'] < 3.5 and relatorio_fora['media_gols_partida'] < 3.5:
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao)
+    if not relatorio_casa or not relatorio_fora:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
+        return None
+    if relatorio_casa['media_gols_partida'] < 3.5 and relatorio_fora['media_gols_partida'] < 3.5:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols (C|F): {relatorio_casa['media_gols_partida']:.2f} | {relatorio_fora['media_gols_partida']:.2f}")
         motivo = f"O mercado espera muitos gols (odd Over 2.5 baixa), mas a média de gols recente das equipes ({relatorio_casa['media_gols_partida']:.2f} e {relatorio_fora['media_gols_partida']:.2f}) sugere que a linha de 3.5 gols está exagerada."
         return {"type": "aposta", "mercado": "Menos de 3.5", "odd": odd_under_3_5, "emoji": '📏', "nome_estrategia": "LINHA ESTICADA (VALIDADA)", "motivo": motivo}
@@ -545,18 +534,18 @@ def analisar_linha_esticada(jogo, contexto):
 
 def analisar_zebra_valorosa(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['h2h']:
-        return None
+    if not odds or not odds['h2h']: return None
     odds_h2h = {k: v for k, v in odds['h2h'].items() if k != 'Draw'}
-    if not odds_h2h:
-        return None
+    if not odds_h2h: return None
     nome_favorito, odd_favorito = min(odds_h2h, key=odds_h2h.get), min(odds_h2h.values())
     odd_empate = odds['h2h'].get('Draw')
-    if not (odd_favorito < ZEBRA_VALOROSA_FAVORITO_MAX_ODD and odd_empate and ZEBRA_VALOROSA_EMPATE_MIN_ODD <= odd_empate <= ZEBRA_VALOROSA_EMPATE_MAX_ODD):
-        return None
+    if not (odd_favorito < ZEBRA_VALOROSA_FAVORITO_MAX_ODD and odd_empate and ZEBRA_VALOROSA_EMPATE_MIN_ODD <= odd_empate <= ZEBRA_VALOROSA_EMPATE_MAX_ODD): return None
     print(f"  -> Jogo pré-qualificado para 'Zebra Valorosa', favorito: {nome_favorito}")
     relatorio_fav = consultar_forma_sofascore(nome_favorito, contexto['cache_execucao'])
-    if relatorio_fav and ('D' in relatorio_fav['forma'] or 'E' in relatorio_fav['forma']):
+    if not relatorio_fav:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma para '{nome_favorito}'.")
+        return None
+    if ('D' in relatorio_fav['forma'] or 'E' in relatorio_fav['forma']):
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Forma do favorito tem brechas: {relatorio_fav['forma']}")
         motivo = f"Apesar do favoritismo esmagador, o time favorito ({nome_favorito}) mostrou instabilidade recente ({relatorio_fav['forma']}), o que aumenta o valor da aposta no empate."
         return {"type": "aposta", "mercado": "Empate", "odd": odd_empate, "emoji": '🦓', "nome_estrategia": "ZEBRA VALOROSA (VALIDADO)", "motivo": motivo}
@@ -568,167 +557,114 @@ def analisar_mercado_congelado(jogo, contexto):
 
 def analisar_favorito_conservador(jogo, contexto):
     odds = extrair_odds_principais(jogo)
-    if not odds or not odds['h2h'] or not odds['totals_1_5']:
-        return None
+    if not odds or not odds['h2h'] or not odds['totals_1_5']: return None
     odds_h2h = {k: v for k, v in odds['h2h'].items() if k != 'Draw'}
-    if not odds_h2h:
-        return None
+    if not odds_h2h: return None
     nome_favorito, odd_favorito = min(odds_h2h, key=odds_h2h.get), min(odds_h2h.values())
     odd_over_1_5 = odds.get('totals_1_5', {}).get('Over')
-    if not (odd_favorito <= FAVORITO_CONSERVADOR_MAX_ODD and odd_over_1_5 and odd_over_1_5 > FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD):
-        return None
+    if not (odd_favorito <= FAVORITO_CONSERVADOR_MAX_ODD and odd_over_1_5 and odd_over_1_5 > FAVORITO_CONSERVADOR_OVER_1_5_MIN_ODD): return None
     print(f"  -> Jogo pré-qualificado para 'Favorito Conservador': {nome_favorito}")
     relatorio = consultar_forma_sofascore(nome_favorito, contexto['cache_execucao'])
-    if relatorio and relatorio['forma'].count('V') >= 3:
+    if not relatorio:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma para '{nome_favorito}'.")
+        return None
+    if relatorio['forma'].count('V') >= 3:
         print(f"  -> ✅ [Sofascore] Validação APROVADA! Forma: {relatorio['forma']}")
         motivo = f"O time favorito ({nome_favorito}) está em boa forma recente, com {relatorio['forma'].count('V')} vitórias nos últimos {len(relatorio['forma'])} jogos."
         return {"type": "aposta", "mercado": "Mais de 1.5", "odd": odd_over_1_5, "emoji": '💪', "nome_estrategia": "FAVORITO CONSERVADOR (VALIDADO)", "motivo": motivo}
-    print(f"  -> ❌ [Sofascore] Validação REPROVADA. Forma: {relatorio['forma'] if relatorio else 'N/A'}")
+    print(f"  -> ❌ [Sofascore] Validação REPROVADA. Forma: {relatorio['forma']}")
     return None
 
 def analisar_pressao_mercado(jogo, contexto):
-    historico_odds = contexto.get("historico_odds", {})
-    jogo_id = jogo.get("id")
-
-    if not jogo_id or jogo_id not in historico_odds:
+    odds = extrair_odds_principais(jogo)
+    if not odds or not odds['totals_2_5']: return None
+    odd_over_2_5 = odds['totals_2_5'].get('Over')
+    if not (odd_over_2_5 and PRESSAO_MERCADO_OVER_2_5_MIN_ODD <= odd_over_2_5 <= PRESSAO_MERCADO_OVER_2_5_MAX_ODD): return None
+    print(f"  -> Jogo pré-qualificado para 'Pressão do Mercado': {jogo['home_team']} vs {jogo['away_team']}")
+    cache_execucao = contexto['cache_execucao']
+    relatorio_casa, relatorio_fora = consultar_forma_sofascore(jogo['home_team'], cache_execucao), consultar_forma_sofascore(jogo['away_team'], cache_execucao)
+    if not relatorio_casa or not relatorio_fora:
+        print(f"  -> ❌ [Sofascore] Validação REPROVADA. Não foi possível obter o relatório de forma de um dos times.")
         return None
-
-    print(f"  -> Analisando 'Pressão do Mercado' para: {jogo['home_team']} vs {jogo['away_team']}")
-
-    dados_antigos = historico_odds[jogo_id]
-    odds_antigas = dados_antigos.get("opening_odds", {})
-    odds_atuais_data = extrair_odds_principais(jogo)
-    if not odds_atuais_data:
-        return None
-    odds_atuais = odds_atuais_data.get('h2h', {})
-
-    if not odds_antigas or not odds_atuais:
-        return None
-
-    odds_antigas_sem_empate = {k: v for k, v in odds_antigas.items() if k != 'Draw'}
-    odds_atuais_sem_empate = {k: v for k, v in odds_atuais.items() if k != 'Draw'}
-
-    if not odds_antigas_sem_empate or not odds_atuais_sem_empate:
-        return None
-
-    fav_antigo = min(odds_antigas_sem_empate, key=odds_antigas_sem_empate.get)
-    fav_atual = min(odds_atuais_sem_empate, key=odds_atuais_sem_empate.get)
-
-    if fav_antigo != fav_atual:
-        return None
-
-    odd_antiga = odds_antigas[fav_antigo]
-    odd_atual = odds_atuais[fav_atual]
-
-    if not (PRESSAO_MERCADO_OPENING_ODD_MIN <= odd_antiga <= PRESSAO_MERCADO_OPENING_ODD_MAX):
-        return None
-    if odd_atual > PRESSAO_MERCADO_CURRENT_ODD_MAX:
-        return None
-
-    percent_drop = ((odd_antiga - odd_atual) / odd_antiga) * 100
-
-    if percent_drop >= PRESSAO_MERCADO_MIN_ODD_DROP_PERCENT:
-        print(f"  -> ✅ PRESSÃO DO MERCADO DETETADA! Odd do {fav_atual} caiu {percent_drop:.2f}% (de {odd_antiga} para {odd_atual})")
-        motivo = f"A odd para a vitória do(a) {fav_atual} caiu significativamente em {percent_drop:.2f}%, de {odd_antiga} para {odd_atual}, indicando forte pressão do mercado a seu favor."
-        return {"type": "aposta", "mercado": f"Resultado Final - {fav_atual}", "odd": odd_atual, "emoji": '💰', "nome_estrategia": "PRESSÃO DO MERCADO (QUEDA DE ODD)", "motivo": motivo}
-
+    if (relatorio_casa['media_gols_partida'] + relatorio_fora['media_gols_partida']) / 2 > 2.6:
+        print(f"  -> ✅ [Sofascore] Validação APROVADA! Média de gols combinada: {(relatorio_casa['media_gols_partida'] + relatorio_fora['media_gols_partida']) / 2:.2f}")
+        motivo = f"As odds estão em uma faixa de valor para Over e a média de gols combinada das equipes nos jogos recentes é alta ({(relatorio_casa['media_gols_partida'] + relatorio_fora['media_gols_partida']) / 2:.2f})."
+        return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🌡️', "nome_estrategia": "PRESSÃO DO MERCADO (VALIDADA)", "motivo": motivo}
+    print(f"  -> ❌ [Sofascore] Validação REPROVADA.")
     return None
 
 def analisar_dominio_em_cantos(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
-
     if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO or stats_fora.get('total_jogos_fora', 0) < MIN_JOGOS_HISTORICO:
         return None
-
     condicao_casa_pro = stats_casa.get('avg_escanteios_pro_casa', 0) >= CANTOS_HISTORICO_MIN_AVG_PRO
     condicao_fora_sofre = stats_fora.get('avg_escanteios_contra_fora', 0) >= CANTOS_HISTORICO_MIN_AVG_CONTRA
     soma_pro = stats_casa.get('avg_escanteios_pro_casa', 0) + stats_fora.get('avg_escanteios_pro_fora', 0)
     condicao_soma = soma_pro >= CANTOS_HISTORICO_MIN_SUM_GERAL
-
     if condicao_casa_pro and condicao_fora_sofre and condicao_soma:
         print(f"  -> ✅ ALERTA DE CANTOS! {time_casa} (média {stats_casa.get('avg_escanteios_pro_casa', 0):.2f}) vs {time_fora} (sofre média {stats_fora.get('avg_escanteios_contra_fora', 0):.2f})")
         motivo = f"O time da casa ({time_casa}) tem uma forte média de escanteios a favor ({stats_casa.get('avg_escanteios_pro_casa', 0):.2f}) e o visitante ({time_fora}) costuma sofrer muitos escanteios ({stats_fora.get('avg_escanteios_contra_fora', 0):.2f}). A soma das médias de escanteios a favor de ambas as equipes é de {soma_pro:.2f}."
         return {"type": "alerta", "emoji": '🚩', "nome_estrategia": "ALERTA DE DOMÍNIO EM CANTOS (HISTÓRICO)", "motivo": motivo}
-
     return None
 
 def analisar_pressao_ofensiva(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
-
     if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO or stats_fora.get('total_jogos_fora', 0) < MIN_JOGOS_HISTORICO:
         return None
-
     condicao_remates_casa = stats_casa.get('avg_remates_pro_casa', 0) >= PRESSAO_OFENSIVA_MIN_REMATES_PRO
     condicao_remates_alvo_casa = stats_casa.get('avg_remates_alvo_pro_casa', 0) >= PRESSAO_OFENSIVA_MIN_REMATES_ALVO_PRO
-
     if condicao_remates_casa and condicao_remates_alvo_casa:
         odds = extrair_odds_principais(jogo)
         if not odds: return None
-
         odd_over_2_5 = odds.get('totals_2_5', {}).get('Over')
         if odd_over_2_5 and odd_over_2_5 >= PRESSAO_OFENSIVA_MIN_ODD_OVER_2_5:
             print(f"  -> ✅ PRESSÃO OFENSIVA DETETADA! {time_casa} tem média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates. Odd Over 2.5: {odd_over_2_5}")
             motivo = f"O time da casa ({time_casa}) possui um forte histórico ofensivo, com média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates e {stats_casa.get('avg_remates_alvo_pro_casa', 0):.2f} remates no alvo por jogo em casa. A odd para Mais de 2.5 Gols está com valor."
             return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '💥', "nome_estrategia": "PRESSÃO OFENSIVA (OVER 2.5)", "motivo": motivo}
-
     return None
 
 def analisar_jogo_agressivo(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
-
     if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO or stats_fora.get('total_jogos_fora', 0) < MIN_JOGOS_HISTORICO:
         return None
-
     media_cartoes_casa = stats_casa.get('avg_cartoes_amarelos_pro_casa', 0)
     media_cartoes_fora = stats_fora.get('avg_cartoes_amarelos_pro_fora', 0)
-
     condicao_casa = media_cartoes_casa >= CARTOES_MIN_AVG_EQUIPA
     condicao_fora = media_cartoes_fora >= CARTOES_MIN_AVG_EQUIPA
     soma_cartoes = media_cartoes_casa + media_cartoes_fora
     condicao_soma = soma_cartoes >= CARTOES_MIN_AVG_JOGO_SUM
-
     if condicao_casa and condicao_fora and condicao_soma:
         print(f"  -> ✅ ALERTA DE JOGO AGRESSIVO! Média de cartões C|F: {media_cartoes_casa:.2f}|{media_cartoes_fora:.2f}")
         motivo = f"Este jogo tem um forte potencial para ser agressivo. A média de cartões amarelos do {time_casa} é de {media_cartoes_casa:.2f} e a do {time_fora} é de {media_cartoes_fora:.2f}. A soma das médias é de {soma_cartoes:.2f}."
         return {"type": "alerta", "emoji": '🟨', "nome_estrategia": "ALERTA DE JOGO AGRESSIVO (CARTÕES)", "motivo": motivo}
-
     return None
 
 def analisar_pressao_ofensiva_extrema(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
-
     if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
         return None
-
     condicao_remates_casa = stats_casa.get('avg_remates_pro_casa', 0) >= PRESSAO_EXTREMA_MIN_REMATES_PRO
     condicao_remates_alvo_casa = stats_casa.get('avg_remates_alvo_pro_casa', 0) >= PRESSAO_EXTREMA_MIN_REMATES_ALVO_PRO
-
     if condicao_remates_casa and condicao_remates_alvo_casa:
         odds = extrair_odds_principais(jogo)
         if not odds: return None
-
         odd_over_2_5 = odds.get('totals_2_5', {}).get('Over')
         if odd_over_2_5 and (PRESSAO_EXTREMA_ODD_MIN <= odd_over_2_5 <= PRESSAO_EXTREMA_ODD_MAX):
             print(f"  -> ✅ PRESSÃO EXTREMA DETETADA! {time_casa} tem média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates. Odd Over 2.5: {odd_over_2_5}")
             motivo = f"O time da casa ({time_casa}) possui um histórico de domínio ofensivo extremo, com média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates e {stats_casa.get('avg_remates_alvo_pro_casa', 0):.2f} remates no alvo por jogo em casa. A odd para Mais de 2.5 Gols está dentro da faixa de valor definida."
             return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🎯', "nome_estrategia": "PRESSÃO EXTREMA (OVER 2.5)", "motivo": motivo}
-
     return None
 
 # --- 4. FUNÇÕES DE ORQUESTRAÇÃO ---
@@ -739,11 +675,9 @@ def verificar_apostas_pendentes_sofascore():
     if not apostas_pendentes:
         print("Nenhuma aposta pendente na lista.")
         return
-
     apostas_restantes = []
     apostas_concluidas = []
     agora_timestamp = int(datetime.now().timestamp())
-
     for aposta in apostas_pendentes:
         if 'timestamp' in aposta and agora_timestamp > aposta['timestamp'] + (110 * 60):
             resultado_api = buscar_resultado_sofascore(aposta['time_casa'], aposta['time_fora'], aposta['timestamp'])
@@ -752,7 +686,6 @@ def verificar_apostas_pendentes_sofascore():
                 total_gols = placar_casa + placar_fora
                 resultado_final = ""
                 mercado = aposta['mercado']
-
                 if "Mais de 1.5" in mercado:
                     resultado_final = "GREEN" if total_gols > 1.5 else "RED"
                 elif "Mais de 2.5" in mercado:
@@ -769,11 +702,9 @@ def verificar_apostas_pendentes_sofascore():
                     resultado_final = "GREEN" if placar_fora > placar_casa else "RED"
                 elif "Ambas as Equipas Marcam - Sim" in mercado:
                     resultado_final = "GREEN" if placar_casa > 0 and placar_fora > 0 else "RED"
-
                 if resultado_final:
                     print(f"  -> Resultado encontrado para {aposta['nome_jogo']}: {resultado_final}")
                     aposta['resultado'] = resultado_final
-
                     mensagem_resultado = registrar_resultado(aposta, resultado_final, placar_casa, placar_fora)
                     enviar_alerta_telegram(mensagem_resultado)
                     apostas_concluidas.append(aposta)
@@ -783,7 +714,6 @@ def verificar_apostas_pendentes_sofascore():
                 apostas_restantes.append(aposta)
         else:
             apostas_restantes.append(aposta)
-
     salvar_json(apostas_restantes, ARQUIVO_PENDENTES)
     if apostas_concluidas:
         resultados_dia = carregar_json(ARQUIVO_RESULTADOS_DIA)
@@ -924,7 +854,7 @@ def rodar_analise_completa():
         print(f"  > ERRO na busca de odds BTTS: {e}")
 
     salvar_odds_futuras(jogos_do_dia)
-
+    
     contexto = {
         "cache_execucao": {}, "cache_classificacao": {},
         "mapa_ligas": carregar_json(ARQUIVO_MAPA_LIGAS),
@@ -932,7 +862,7 @@ def rodar_analise_completa():
         "dados_btts": dados_btts,
         "historico_odds": carregar_json(ARQUIVO_HISTORICO_ODDS)
     }
-
+    
     if jogos_do_dia:
         contexto['cache_execucao'] = pre_buscar_dados_sofascore(jogos_do_dia, contexto['cache_execucao'])
 
@@ -942,7 +872,9 @@ def rodar_analise_completa():
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado. Estratégias históricas desativadas.")
 
-    jogos_analisados, nomes_jogos_analisados, alerta_de_aposta_enviado_geral = 0, [], False
+    jogos_analisados, nomes_jogos_analisados, alertas_enviados_neste_ciclo = 0, [], 0
+    apostas_feitas_neste_ciclo = []
+    
     if jogos_do_dia:
         fuso_brasilia, fuso_utc = timezone(timedelta(hours=-3)), timezone.utc
         agora_utc = datetime.now(timezone.utc)
@@ -951,7 +883,8 @@ def rodar_analise_completa():
             analisar_tendencia_escanteios, analisar_ambas_marcam, analisar_lider_vs_lanterna,
             analisar_reacao_gigante, analisar_fortaleza_defensiva, analisar_classico_de_gols,
             analisar_goleador_casa, analisar_visitante_fraco, analisar_mandante_fraco, analisar_favoritos_em_niveis,
-            analisar_duelo_tatico, analisar_mercado_otimista, analisar_consenso_de_gols,
+            # analisar_duelo_tatico, # DESATIVADA
+            analisar_mercado_otimista, analisar_consenso_de_gols,
             analisar_consenso_de_defesa, analisar_linha_esticada, analisar_zebra_valorosa,
             analisar_favorito_conservador, analisar_pressao_mercado,
             analisar_dominio_em_cantos, analisar_pressao_ofensiva, analisar_jogo_agressivo,
@@ -965,37 +898,41 @@ def rodar_analise_completa():
 
             inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
             is_live = inicio_jogo_dt < agora_utc
-
+            
             jogos_analisados += 1
             nomes_jogos_analisados.append(f"⚽ {time_casa} vs {time_fora}")
             print(f"\n--------------------------------------------------\nAnalisando Jogo: {time_casa} vs {time_fora}{' (AO VIVO)' if is_live else ''}")
 
             for func in lista_de_funcoes:
-                oportunidade = func(jogo, contexto)
+                try:
+                    oportunidade = func(jogo, contexto)
+                except NameError:
+                    continue
+                
                 if not oportunidade:
                     continue
 
                 if oportunidade.get('type') == 'alerta':
                     print(f"  -> ✅ ALERTA ENCONTRADO: {oportunidade['nome_estrategia']}")
-                    alerta_de_aposta_enviado_geral = True
+                    alertas_enviados_neste_ciclo += 1
                     data_hora = inicio_jogo_dt.astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
-
+                    
                     linhas_alerta = [
                         f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*", "",
                         f"*⚽ JOGO:* {time_casa} vs {time_fora}", f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}", f"*🗓️ DATA:* {data_hora}", "",
                         "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_",
                     ]
-
+                    
                     if "OBSERVAÇÃO AO VIVO" in oportunidade.get('nome_estrategia', ''):
                          linhas_alerta.extend(["", "_*NOTA: Isto é apenas um alerta de observação. Nenhuma aposta foi feita._"])
-
+                    
                     alerta = "\n".join(linhas_alerta)
                     enviar_alerta_telegram(alerta)
 
                 elif oportunidade.get('type') == 'aposta':
                     if is_live:
                         print(f"  -> ⚠️ Oportunidade de APOSTA encontrada em jogo AO VIVO. Convertendo para ALERTA (Modo Observação).")
-                        alerta_de_aposta_enviado_geral = True
+                        alertas_enviados_neste_ciclo += 1
                         data_hora = inicio_jogo_dt.astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
                         mercado_str = oportunidade['mercado']
                         if "Mais de" in mercado_str or "Menos de" in mercado_str:
@@ -1015,8 +952,8 @@ def rodar_analise_completa():
                     else:
                         if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
                             print(f"  -> ✅ OPORTUNIDADE PRÉ-JOGO APROVADA ({oportunidade['odd']} >= {ODD_MINIMA_GLOBAL})")
-                            alerta_de_aposta_enviado_geral = True
-
+                            apostas_feitas_neste_ciclo.append(oportunidade)
+                            
                             banca = carregar_banca()
                             stake = calcular_stake(oportunidade['odd'], banca)
                             saldo_atual = banca.get('banca_atual')
@@ -1051,39 +988,46 @@ def rodar_analise_completa():
                             salvar_json(apostas_pendentes, ARQUIVO_PENDENTES)
                         else:
                             print(f"  -> ❌ OPORTUNIDADE PRÉ-JOGO REPROVADA PELA ODD MÍNIMA ({oportunidade.get('odd', 0)} < {ODD_MINIMA_GLOBAL})")
+    
+    print("\n--- Análise deste ciclo finalizada. Gerando relatório de status... ---")
+    
+    apostas_pendentes_final = carregar_json(ARQUIVO_PENDENTES)
+    total_pendentes = len(apostas_pendentes_final)
+    
+    texto_pendentes_lista = []
+    if total_pendentes > 0:
+        texto_pendentes_lista.append("\n\n*🔔 Apostas Pendentes:*")
+        for aposta in apostas_pendentes_final:
+            texto_pendentes_lista.append(f"- {aposta['nome_jogo']} ({aposta['mercado']})")
+    texto_pendentes = "\n".join(texto_pendentes_lista)
 
-    print("\n--- Análise deste ciclo finalizada. ---")
-    if not alerta_de_aposta_enviado_geral:
-        data_hoje_str = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
-        jogos_texto = "\n".join(nomes_jogos_analisados[:15])
-        if len(nomes_jogos_analisados) > 15:
-            jogos_texto += f"\n...e mais {len(nomes_jogos_analisados) - 15} jogos."
-        total_pendentes = len(carregar_json(ARQUIVO_PENDENTES))
-
-        linhas_mensagem = [
-            f"🦅 *Relatório do Falcão da ODDS*", "", f"🗓️ *Data:* {data_hoje_str}", "-----------------------------------", "", "🔍 *Resumo:*",
-            "- Verifiquei e processei resultados antigos.", f"- Analisei *{jogos_analisados}* jogos com o arsenal completo de estratégias.",
-            f"- Atualmente, há *{total_pendentes}* apostas em aberto.", "", "🚫 *Resultado:*", "Nenhuma oportunidade de alta qualidade encontrada neste ciclo.",
-            "", "🗒️ *Jogos Verificados:*", f"{jogos_texto if jogos_texto else 'Nenhum jogo encontrado.'}", "", "Continuo monitorando! 🕵️‍♂️"
-        ]
-        mensagem_status = "\n".join(linhas_mensagem)
-        print("Nenhuma oportunidade encontrada. Enviando relatório de status...")
-        enviar_alerta_telegram(mensagem_status)
-
-
-# --- 6. PONTO DE ENTRADA ---
-if __name__ == "__main__":
-    print("--- Iniciando execução única do bot (v15.3 com Gestão de Banca) ---")
-    if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
-        print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
+    data_hoje_str = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
+    
+    linhas_mensagem = [
+        f"🦅 *Relatório do Falcão da ODDS*", "", f"🗓️ *Data:* {data_hoje_str}", "-----------------------------------", "",
+        "🔍 *Resumo da Execução:*",
+        f"- *{jogos_analisados}* jogos analisados.",
+        f"- *{total_pendentes}* apostas estão em aberto no momento.", ""
+    ]
+    
+    novas_entradas_count = len(apostas_feitas_neste_ciclo)
+    if novas_entradas_count > 0:
+        linhas_mensagem.append(f"✅ *{novas_entradas_count}* nova(s) oportunidade(s) de aposta encontradas e enviadas!")
+    elif alertas_enviados_neste_ciclo > 0:
+        linhas_mensagem.append(f"⚠️ *{alertas_enviados_neste_ciclo}* novo(s) alerta(s) estatístico(s) enviados.")
     else:
-        rodar_analise_completa()
-    print("--- Execução finalizada com sucesso. ---")
+        linhas_mensagem.append("🚫 *Nenhuma nova oportunidade ou alerta de alta qualidade encontrados neste ciclo.*")
+
+    if texto_pendentes:
+        linhas_mensagem.append(texto_pendentes)
+    
+    mensagem_status = "\n".join(linhas_mensagem)
+    enviar_alerta_telegram(mensagem_status)
 
 
 # --- 6. PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot (v15.3 com Gestão de Banca) ---")
+    print("--- Iniciando execução única do bot ---")
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
