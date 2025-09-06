@@ -54,7 +54,7 @@ def enviar_alerta_telegram(mensagem):
 def calcular_estatisticas_historicas(df):
     if df.empty:
         return {}, {}
-        
+
     cols_stats = ['FTHG', 'FTAG', 'HC', 'AC', 'HS', 'AS', 'HST', 'AST', 'HY', 'AY', 'HR', 'AR']
     for col in cols_stats:
         if col in df.columns:
@@ -81,7 +81,7 @@ def calcular_estatisticas_historicas(df):
         print("  -> ERRO: Falha ao converter a coluna de datas. Verifique o formato no CSV.")
         return {}, {}
     df['Resultado'] = df.apply(lambda r: 'V' if r['FTHG'] > r['FTAG'] else ('E' if r['FTHG'] == r['FTAG'] else 'D'), axis=1)
-    
+
     stats_casa = df.groupby('HomeTeam').agg(
         avg_gols_marcados_casa=('FTHG', 'mean'),
         avg_gols_sofridos_casa=('FTAG', 'mean'),
@@ -95,7 +95,7 @@ def calcular_estatisticas_historicas(df):
         avg_cartoes_vermelhos_pro_casa=('HR', 'mean'),
         total_jogos_casa=('HomeTeam', 'count')
     )
-    
+
     stats_fora = df.groupby('AwayTeam').agg(
         avg_gols_marcados_fora=('FTAG', 'mean'),
         avg_gols_sofridos_fora=('FTHG', 'mean'),
@@ -111,11 +111,12 @@ def calcular_estatisticas_historicas(df):
     )
 
     vitorias_casa = df[df['Resultado'] == 'V'].groupby('HomeTeam').size().rename('vitorias_casa')
+    derrotas_casa = df[df['Resultado'] == 'D'].groupby('HomeTeam').size().rename('derrotas_casa')
     vitorias_fora = df[df['Resultado'] == 'D'].groupby('AwayTeam').size().rename('vitorias_fora')
     derrotas_fora = df[df['Resultado'] == 'V'].groupby('AwayTeam').size().rename('derrotas_fora')
-    
-    stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora], axis=1).fillna(0).to_dict('index')
-    
+
+    stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora, derrotas_casa], axis=1).fillna(0).to_dict('index')
+
     for time_nome, stats in stats_individuais.items():
         total_jogos = stats.get('total_jogos_casa', 0) + stats.get('total_jogos_fora', 0)
         total_vitorias = stats.get('vitorias_casa', 0) + stats.get('vitorias_fora', 0)
@@ -123,7 +124,9 @@ def calcular_estatisticas_historicas(df):
             stats['perc_vitorias_geral'] = (total_vitorias / total_jogos) * 100
         if stats.get('total_jogos_fora', 0) > 0:
             stats['perc_derrotas_fora'] = (stats.get('derrotas_fora', 0) / stats['total_jogos_fora']) * 100
-    
+        if stats.get('total_jogos_casa', 0) > 0:
+            stats['perc_derrotas_casa'] = (stats.get('derrotas_casa', 0) / stats['total_jogos_casa']) * 100
+
     df_sorted = df.sort_values(by='Date', ascending=False)
     ultimos_jogos = {}
     for index, row in df_sorted.iterrows():
@@ -135,7 +138,7 @@ def calcular_estatisticas_historicas(df):
     for time_nome, resultado in ultimos_jogos.items():
         if time_nome in stats_individuais:
             stats_individuais[time_nome]['resultado_ultimo_jogo'] = resultado
-            
+
     df['TotalGols'] = df['FTHG'] + df['FTAG']
     df['H2H_Key'] = df.apply(lambda row: '|'.join(sorted([str(row['HomeTeam']), str(row['AwayTeam'])])), axis=1)
     stats_h2h = df.groupby('H2H_Key').agg(avg_gols_h2h=('TotalGols', 'mean'), total_jogos_h2h=('H2H_Key', 'count')).to_dict('index')
@@ -167,16 +170,16 @@ def pre_buscar_dados_sofascore(jogos_do_dia, cache_existente):
     for jogo in jogos_do_dia:
         times_unicos.add(jogo['home_team'])
         times_unicos.add(jogo['away_team'])
-    
+
     print(f"  -> Encontrados {len(times_unicos)} times únicos para buscar dados.")
     cache_preenchido = cache_existente.copy()
-    
+
     for i, time_nome in enumerate(list(times_unicos)):
         if time_nome not in cache_preenchido:
             print(f"  -> Buscando dados para: {time_nome} ({i+1}/{len(times_unicos)})")
             consultar_forma_sofascore(time_nome, cache_preenchido)
             time.sleep(2)
-    
+
     print("  -> ✅ Todos os dados de forma do Sofascore foram pré-buscados e estão em cache.")
     return cache_preenchido
 
@@ -192,7 +195,7 @@ def salvar_odds_futuras(jogos_do_dia):
             continue
 
         inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
-        
+
         if (inicio_jogo_dt - agora) > timedelta(hours=22):
             odds = extrair_odds_principais(jogo)
             if odds and odds.get('h2h'):
@@ -203,7 +206,7 @@ def salvar_odds_futuras(jogos_do_dia):
                     "opening_odds": odds['h2h']
                 }
                 novas_odds_salvas += 1
-    
+
     if novas_odds_salvas > 0:
         salvar_json(historico_odds, ARQUIVO_HISTORICO_ODDS)
         print(f"  -> {novas_odds_salvas} novas odds de jogos futuros foram salvas.")
@@ -402,6 +405,27 @@ def analisar_visitante_fraco(jogo, contexto):
             print(f"  -> ❌ Validação de Odd REPROVADA. Odd da casa: {odd_casa if odd_casa else 'N/A'}")
     return None
 
+def analisar_mandante_fraco(jogo, contexto):
+    stats_individuais = contexto['stats_individuais']
+    time_casa, time_fora = jogo['home_team'], jogo['away_team']
+    stats_casa = stats_individuais.get(time_casa)
+    if not stats_casa or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
+        return None
+    perc_derrotas_casa = stats_casa.get('perc_derrotas_casa', 0)
+    if perc_derrotas_casa >= MANDANTE_FRACO_MIN_PERC_DERROTAS_CASA:
+        print(f"  -> Jogo pré-qualificado para 'Mandante Fraco': {time_casa} ({perc_derrotas_casa:.2f}% de derrotas em casa)")
+        odds = extrair_odds_principais(jogo)
+        if not odds or not odds.get('h2h'):
+            return None
+        odd_fora = odds.get('h2h', {}).get(time_fora)
+        if odd_fora and (MANDANTE_FRACO_ODD_FORA_MIN <= odd_fora <= MANDANTE_FRACO_ODD_FORA_MAX):
+            print(f"  -> ✅ Validação de Odd APROVADA! Odd para {time_fora} vencer: {odd_fora}")
+            motivo = f"O time da casa ({time_casa}) tem um histórico ruim em casa, perdendo {perc_derrotas_casa:.1f}% de suas partidas nesta condição."
+            return {"type": "aposta", "mercado": f"Resultado Final - {time_fora}", "odd": odd_fora, "emoji": '✈️', "nome_estrategia": "MANDANTE FRACO (HISTÓRICO)", "motivo": motivo}
+        else:
+            print(f"  -> ❌ Validação de Odd REPROVADA. Odd do visitante: {odd_fora if odd_fora else 'N/A'}")
+    return None
+
 def analisar_favoritos_em_niveis(jogo, contexto):
     odds = extrair_odds_principais(jogo)
     if not odds or not odds['h2h']:
@@ -570,7 +594,7 @@ def analisar_pressao_mercado(jogo, contexto):
         return None
 
     print(f"  -> Analisando 'Pressão do Mercado' para: {jogo['home_team']} vs {jogo['away_team']}")
-    
+
     dados_antigos = historico_odds[jogo_id]
     odds_antigas = dados_antigos.get("opening_odds", {})
     odds_atuais_data = extrair_odds_principais(jogo)
@@ -580,7 +604,7 @@ def analisar_pressao_mercado(jogo, contexto):
 
     if not odds_antigas or not odds_atuais:
         return None
-        
+
     odds_antigas_sem_empate = {k: v for k, v in odds_antigas.items() if k != 'Draw'}
     odds_atuais_sem_empate = {k: v for k, v in odds_atuais.items() if k != 'Draw'}
 
@@ -592,7 +616,7 @@ def analisar_pressao_mercado(jogo, contexto):
 
     if fav_antigo != fav_atual:
         return None
-    
+
     odd_antiga = odds_antigas[fav_antigo]
     odd_atual = odds_atuais[fav_atual]
 
@@ -607,15 +631,13 @@ def analisar_pressao_mercado(jogo, contexto):
         print(f"  -> ✅ PRESSÃO DO MERCADO DETETADA! Odd do {fav_atual} caiu {percent_drop:.2f}% (de {odd_antiga} para {odd_atual})")
         motivo = f"A odd para a vitória do(a) {fav_atual} caiu significativamente em {percent_drop:.2f}%, de {odd_antiga} para {odd_atual}, indicando forte pressão do mercado a seu favor."
         return {"type": "aposta", "mercado": f"Resultado Final - {fav_atual}", "odd": odd_atual, "emoji": '💰', "nome_estrategia": "PRESSÃO DO MERCADO (QUEDA DE ODD)", "motivo": motivo}
-    
-    return None
 
-# --- NOVAS ESTRATÉGIAS ---
+    return None
 
 def analisar_dominio_em_cantos(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-    
+
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
 
@@ -631,26 +653,26 @@ def analisar_dominio_em_cantos(jogo, contexto):
         print(f"  -> ✅ ALERTA DE CANTOS! {time_casa} (média {stats_casa.get('avg_escanteios_pro_casa', 0):.2f}) vs {time_fora} (sofre média {stats_fora.get('avg_escanteios_contra_fora', 0):.2f})")
         motivo = f"O time da casa ({time_casa}) tem uma forte média de escanteios a favor ({stats_casa.get('avg_escanteios_pro_casa', 0):.2f}) e o visitante ({time_fora}) costuma sofrer muitos escanteios ({stats_fora.get('avg_escanteios_contra_fora', 0):.2f}). A soma das médias de escanteios a favor de ambas as equipes é de {soma_pro:.2f}."
         return {"type": "alerta", "emoji": '🚩', "nome_estrategia": "ALERTA DE DOMÍNIO EM CANTOS (HISTÓRICO)", "motivo": motivo}
-        
+
     return None
 
 def analisar_pressao_ofensiva(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-    
+
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
 
     if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO or stats_fora.get('total_jogos_fora', 0) < MIN_JOGOS_HISTORICO:
         return None
-        
+
     condicao_remates_casa = stats_casa.get('avg_remates_pro_casa', 0) >= PRESSAO_OFENSIVA_MIN_REMATES_PRO
     condicao_remates_alvo_casa = stats_casa.get('avg_remates_alvo_pro_casa', 0) >= PRESSAO_OFENSIVA_MIN_REMATES_ALVO_PRO
 
     if condicao_remates_casa and condicao_remates_alvo_casa:
         odds = extrair_odds_principais(jogo)
         if not odds: return None
-        
+
         odd_over_2_5 = odds.get('totals_2_5', {}).get('Over')
         if odd_over_2_5 and odd_over_2_5 >= PRESSAO_OFENSIVA_MIN_ODD_OVER_2_5:
             print(f"  -> ✅ PRESSÃO OFENSIVA DETETADA! {time_casa} tem média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates. Odd Over 2.5: {odd_over_2_5}")
@@ -662,7 +684,7 @@ def analisar_pressao_ofensiva(jogo, contexto):
 def analisar_jogo_agressivo(jogo, contexto):
     stats_individuais = contexto['stats_individuais']
     time_casa, time_fora = jogo['home_team'], jogo['away_team']
-    
+
     stats_casa = stats_individuais.get(time_casa)
     stats_fora = stats_individuais.get(time_fora)
 
@@ -671,7 +693,7 @@ def analisar_jogo_agressivo(jogo, contexto):
 
     media_cartoes_casa = stats_casa.get('avg_cartoes_amarelos_pro_casa', 0)
     media_cartoes_fora = stats_fora.get('avg_cartoes_amarelos_pro_fora', 0)
-    
+
     condicao_casa = media_cartoes_casa >= CARTOES_MIN_AVG_EQUIPA
     condicao_fora = media_cartoes_fora >= CARTOES_MIN_AVG_EQUIPA
     soma_cartoes = media_cartoes_casa + media_cartoes_fora
@@ -681,7 +703,32 @@ def analisar_jogo_agressivo(jogo, contexto):
         print(f"  -> ✅ ALERTA DE JOGO AGRESSIVO! Média de cartões C|F: {media_cartoes_casa:.2f}|{media_cartoes_fora:.2f}")
         motivo = f"Este jogo tem um forte potencial para ser agressivo. A média de cartões amarelos do {time_casa} é de {media_cartoes_casa:.2f} e a do {time_fora} é de {media_cartoes_fora:.2f}. A soma das médias é de {soma_cartoes:.2f}."
         return {"type": "alerta", "emoji": '🟨', "nome_estrategia": "ALERTA DE JOGO AGRESSIVO (CARTÕES)", "motivo": motivo}
-        
+
+    return None
+
+def analisar_pressao_ofensiva_extrema(jogo, contexto):
+    stats_individuais = contexto['stats_individuais']
+    time_casa, time_fora = jogo['home_team'], jogo['away_team']
+
+    stats_casa = stats_individuais.get(time_casa)
+    stats_fora = stats_individuais.get(time_fora)
+
+    if not stats_casa or not stats_fora or stats_casa.get('total_jogos_casa', 0) < MIN_JOGOS_HISTORICO:
+        return None
+
+    condicao_remates_casa = stats_casa.get('avg_remates_pro_casa', 0) >= PRESSAO_EXTREMA_MIN_REMATES_PRO
+    condicao_remates_alvo_casa = stats_casa.get('avg_remates_alvo_pro_casa', 0) >= PRESSAO_EXTREMA_MIN_REMATES_ALVO_PRO
+
+    if condicao_remates_casa and condicao_remates_alvo_casa:
+        odds = extrair_odds_principais(jogo)
+        if not odds: return None
+
+        odd_over_2_5 = odds.get('totals_2_5', {}).get('Over')
+        if odd_over_2_5 and (PRESSAO_EXTREMA_ODD_MIN <= odd_over_2_5 <= PRESSAO_EXTREMA_ODD_MAX):
+            print(f"  -> ✅ PRESSÃO EXTREMA DETETADA! {time_casa} tem média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates. Odd Over 2.5: {odd_over_2_5}")
+            motivo = f"O time da casa ({time_casa}) possui um histórico de domínio ofensivo extremo, com média de {stats_casa.get('avg_remates_pro_casa', 0):.2f} remates e {stats_casa.get('avg_remates_alvo_pro_casa', 0):.2f} remates no alvo por jogo em casa. A odd para Mais de 2.5 Gols está dentro da faixa de valor definida."
+            return {"type": "aposta", "mercado": "Mais de 2.5", "odd": odd_over_2_5, "emoji": '🎯', "nome_estrategia": "PRESSÃO EXTREMA (OVER 2.5)", "motivo": motivo}
+
     return None
 
 # --- 4. FUNÇÕES DE ORQUESTRAÇÃO ---
@@ -877,7 +924,7 @@ def rodar_analise_completa():
         print(f"  > ERRO na busca de odds BTTS: {e}")
 
     salvar_odds_futuras(jogos_do_dia)
-    
+
     contexto = {
         "cache_execucao": {}, "cache_classificacao": {},
         "mapa_ligas": carregar_json(ARQUIVO_MAPA_LIGAS),
@@ -885,7 +932,7 @@ def rodar_analise_completa():
         "dados_btts": dados_btts,
         "historico_odds": carregar_json(ARQUIVO_HISTORICO_ODDS)
     }
-    
+
     if jogos_do_dia:
         contexto['cache_execucao'] = pre_buscar_dados_sofascore(jogos_do_dia, contexto['cache_execucao'])
 
@@ -903,11 +950,12 @@ def rodar_analise_completa():
         lista_de_funcoes = [
             analisar_tendencia_escanteios, analisar_ambas_marcam, analisar_lider_vs_lanterna,
             analisar_reacao_gigante, analisar_fortaleza_defensiva, analisar_classico_de_gols,
-            analisar_goleador_casa, analisar_visitante_fraco, analisar_favoritos_em_niveis,
+            analisar_goleador_casa, analisar_visitante_fraco, analisar_mandante_fraco, analisar_favoritos_em_niveis,
             analisar_duelo_tatico, analisar_mercado_otimista, analisar_consenso_de_gols,
             analisar_consenso_de_defesa, analisar_linha_esticada, analisar_zebra_valorosa,
             analisar_favorito_conservador, analisar_pressao_mercado,
-            analisar_dominio_em_cantos, analisar_pressao_ofensiva, analisar_jogo_agressivo
+            analisar_dominio_em_cantos, analisar_pressao_ofensiva, analisar_jogo_agressivo,
+            analisar_pressao_ofensiva_extrema
         ]
 
         for jogo in jogos_do_dia:
@@ -917,7 +965,7 @@ def rodar_analise_completa():
 
             inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
             is_live = inicio_jogo_dt < agora_utc
-            
+
             jogos_analisados += 1
             nomes_jogos_analisados.append(f"⚽ {time_casa} vs {time_fora}")
             print(f"\n--------------------------------------------------\nAnalisando Jogo: {time_casa} vs {time_fora}{' (AO VIVO)' if is_live else ''}")
@@ -931,16 +979,16 @@ def rodar_analise_completa():
                     print(f"  -> ✅ ALERTA ENCONTRADO: {oportunidade['nome_estrategia']}")
                     alerta_de_aposta_enviado_geral = True
                     data_hora = inicio_jogo_dt.astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
-                    
+
                     linhas_alerta = [
                         f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*", "",
                         f"*⚽ JOGO:* {time_casa} vs {time_fora}", f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}", f"*🗓️ DATA:* {data_hora}", "",
                         "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_",
                     ]
-                    
-                    if "OBSERVAÇÃO AO VIVO" in oportunidade['nome_estrategia']:
+
+                    if "OBSERVAÇÃO AO VIVO" in oportunidade.get('nome_estrategia', ''):
                          linhas_alerta.extend(["", "_*NOTA: Isto é apenas um alerta de observação. Nenhuma aposta foi feita._"])
-                    
+
                     alerta = "\n".join(linhas_alerta)
                     enviar_alerta_telegram(alerta)
 
@@ -968,7 +1016,7 @@ def rodar_analise_completa():
                         if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
                             print(f"  -> ✅ OPORTUNIDADE PRÉ-JOGO APROVADA ({oportunidade['odd']} >= {ODD_MINIMA_GLOBAL})")
                             alerta_de_aposta_enviado_geral = True
-                            
+
                             banca = carregar_banca()
                             stake = calcular_stake(oportunidade['odd'], banca)
                             saldo_atual = banca.get('banca_atual')
@@ -1003,7 +1051,7 @@ def rodar_analise_completa():
                             salvar_json(apostas_pendentes, ARQUIVO_PENDENTES)
                         else:
                             print(f"  -> ❌ OPORTUNIDADE PRÉ-JOGO REPROVADA PELA ODD MÍNIMA ({oportunidade.get('odd', 0)} < {ODD_MINIMA_GLOBAL})")
-    
+
     print("\n--- Análise deste ciclo finalizada. ---")
     if not alerta_de_aposta_enviado_geral:
         data_hoje_str = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
