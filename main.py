@@ -10,8 +10,9 @@ import pandas as pd
 from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
 # --- Bloco de importação corrigido ---
 from sofascore_utils import (
-    consultar_classificacao_sofascore,
+    consultar_classificacao_sofascore, # <-- CORRIGIDO
     consultar_estatisticas_escanteios,
+    # ... resto das funções
     consultar_forma_sofascore,
     buscar_resultado_sofascore,
     buscar_jogos_ao_vivo,
