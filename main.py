@@ -8,6 +8,7 @@ import pandas as pd
 
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
+# --- Bloco de importação corrigido ---
 from sofascore_utils import (
     consultar_classificacao_sofascore,
     consultar_estatisticas_escanteios,
@@ -16,8 +17,8 @@ from sofascore_utils import (
     buscar_jogos_ao_vivo,
     buscar_estatisticas_ao_vivo
 )
-)
-from utils import carregar_json, salvar_json, classificar_odd
+# --- Fim do bloco corrigido ---
+from utils import carregar_json, salvar_json
 from config import *
 
 # --- 1. CONFIGURAÇÕES GERAIS DO AMBIENTE ---
