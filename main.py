@@ -9,8 +9,10 @@ import pandas as pd
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
 from sofascore_utils import (
-    consultar_classificacao_sofascore,
+    consultar_classificacao_sofascore, # <-- CORRIGIDO
     consultar_estatisticas_escanteios,
+    # ... resto das funções
+)
     consultar_forma_sofascore,
     buscar_resultado_sofascore,
     buscar_jogos_ao_vivo,
