@@ -1,1 +1,52 @@
-{}
+{
+    "97c54d305c4555a79ab0f89e43fd9981": {
+        "home_team": "SD Eibar",
+        "away_team": "Andorra CF",
+        "commence_time": "2025-09-08T18:30:00Z",
+        "opening_odds": {
+            "Andorra CF": 4.97,
+            "SD Eibar": 1.83,
+            "Draw": 3.4
+        }
+    },
+    "c3a269e6ea17b75700891efe97eb5dca": {
+        "home_team": "Belarus",
+        "away_team": "Scotland",
+        "commence_time": "2025-09-08T18:45:00Z",
+        "opening_odds": {
+            "Belarus": 7.32,
+            "Scotland": 1.55,
+            "Draw": 3.83
+        }
+    },
+    "6bfde47966830f50b5c033359bcb9460": {
+        "home_team": "Croatia",
+        "away_team": "Montenegro",
+        "commence_time": "2025-09-08T18:45:00Z",
+        "opening_odds": {
+            "Croatia": 1.2,
+            "Montenegro": 15.78,
+            "Draw": 6.56
+        }
+    },
+    "eed0f3918601102cd2bea389fad4b947": {
+        "home_team": "Greece",
+        "away_team": "Denmark",
+        "commence_time": "2025-09-08T18:45:00Z",
+        "opening_odds": {
+            "Denmark": 3.12,
+            "Greece": 2.48,
+            "Draw": 3.17
+        }
+    },
+    "83936a7c7d36b11617c281e9f36219fd": {
+        "home_team": "Gibraltar",
+        "away_team": "Faroe Islands",
+        "commence_time": "2025-09-08T18:45:00Z",
+        "opening_odds": {
+            "Faroe Islands": 1.51,
+            "Gibraltar": 8.17,
+            "Draw": 3.84
+        }
+    }
+}
