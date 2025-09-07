@@ -932,7 +932,7 @@ def rodar_analise_completa():
                     ]
                     
                     if "OBSERVAÇÃO AO VIVO" in oportunidade.get('nome_estrategia', ''):
-                         linhas_alerta.extend(["", "_*NOTA: Isto é apenas um alerta de observação. Nenhuma aposta foi feita._"])
+                        linhas_alerta.extend(["", "_*NOTA: Isto é apenas um alerta de observação. Nenhuma aposta foi feita._"])
                     
                     alerta = "\n".join(linhas_alerta)
                     enviar_alerta_telegram(alerta)
@@ -1039,13 +1039,8 @@ if __name__ == "__main__":
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
-        while True:
-            try:
-                rodar_analise_completa()
-                intervalo_de_espera = 3600 # 1 hora
-                print(f"\n--- Ciclo concluído. A aguardar {int(intervalo_de_espera / 60)} minutos até a próxima execução... ---")
-                time.sleep(intervalo_de_espera)
-            except Exception as e:
-                print(f"❌ Ocorreu um erro inesperado no ciclo principal: {e}")
-                print("    A reiniciar o ciclo em 60 segundos...")
-                time.sleep(60)
+        try:
+            rodar_analise_completa()
+            print("\n--- Ciclo único de análise concluído com sucesso. ---")
+        except Exception as e:
+            print(f"❌ Ocorreu um erro inesperado durante a execução: {e}")
