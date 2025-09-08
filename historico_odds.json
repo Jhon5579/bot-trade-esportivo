@@ -48,5 +48,35 @@
             "Gibraltar": 8.17,
             "Draw": 3.84
         }
+    },
+    "41ad8ccc542d090f113527fc9373949f": {
+        "home_team": "Albania",
+        "away_team": "Latvia",
+        "commence_time": "2025-09-09T18:45:00Z",
+        "opening_odds": {
+            "Albania": 1.39,
+            "Latvia": 10.08,
+            "Draw": 4.41
+        }
+    },
+    "8a94f8067f03b6ae7d0320000d63cbb1": {
+        "home_team": "Bosnia & Herzegovina",
+        "away_team": "Austria",
+        "commence_time": "2025-09-09T18:45:00Z",
+        "opening_odds": {
+            "Austria": 1.73,
+            "Bosnia & Herzegovina": 5.24,
+            "Draw": 3.67
+        }
+    },
+    "ae9cb45c62289feb262fbd9db66fd161": {
+        "home_team": "Cyprus",
+        "away_team": "Romania",
+        "commence_time": "2025-09-09T18:45:00Z",
+        "opening_odds": {
+            "Cyprus": 6.25,
+            "Romania": 1.6,
+            "Draw": 3.88
+        }
     }
 }
