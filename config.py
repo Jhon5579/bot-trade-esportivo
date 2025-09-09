@@ -2,12 +2,11 @@ from decouple import config
 import os
 
 # --- CHAVES DE ACESSO E TOKENS (LIDOS DO ARQUIVO .ENV) ---
-TELEGRAM_TOKEN = config('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID')
-API_KEY_ODDS = config('API_KEY_ODDS')
+TELEGRAM_TOKEN = env_config('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID = env_config('TELEGRAM_CHAT_ID')
+API_KEY_ODDS = env_config('API_KEY_ODDS')
 
 # --- DICIONÁRIO DE RISCO E NÍVEIS DE ODDS (ATUALIZADO POR VOCÊ) ---
-# Centraliza as definições de probabilidades para facilitar o ajuste e a leitura das estratégias.
 NIVEIS_DE_RISCO_ODDS = {
     "SUPER_FAVORITO": {"min": 1.30, "max": 1.49},
     "FAVORITO":       {"min": 1.50, "max": 1.80},
