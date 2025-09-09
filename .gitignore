@@ -1,6 +1,13 @@
+# Arquivo de segredos
+.env
+
 # Arquivos de Cache
 sofascore_id_cache.json
+sofascore_cache.json
+*.log
+betano_output.html
+oddsportal_output.html
 
-# Pastas de ambiente virtual (se você usar localmente)
+# Pastas de ambiente virtual
 venv/
 __pycache__/
