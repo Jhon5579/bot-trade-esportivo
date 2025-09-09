@@ -9,7 +9,7 @@ import pandas as pd
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
 from sofascore_utils import (
-    buscar_jogos_do_dia_sofascore, # <-- NOVA FUNÇÃO EM USO!
+    buscar_jogos_do_dia_sofascore,
     consultar_classificacao_sofascore,
     consultar_estatisticas_escanteios,
     consultar_forma_sofascore,
@@ -18,21 +18,16 @@ from sofascore_utils import (
     buscar_estatisticas_ao_vivo
 )
 from utils import carregar_json, salvar_json
-from config import *
+from config import * # Importa TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, etc.
 from estrategias import *
 
-# --- 1. CONFIGURAÇÕES GERAIS DO AMBIENTE ---
-API_KEY_ODDS = os.environ.get('API_KEY_ODDS')
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-
+# --- ARQUIVOS E CONSTANTES ---
 ARQUIVO_PENDENTES = 'apostas_pendentes.json'
 ARQUIVO_HISTORICO_APOSTAS = 'historico_de_apostas.json'
 ARQUIVO_RESULTADOS_DIA = 'resultados_do_dia.json'
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
 CASA_ALVO = 'pinnacle'
 ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
-ARQUIVO_HISTORICO_ODDS = 'historico_odds.json'
 ARQUIVO_CACHE_SOFASCORE = 'sofascore_cache.json'
 
 # --- 2. FUNÇÕES DE SUPORTE ---
