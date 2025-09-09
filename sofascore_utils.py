@@ -2,13 +2,58 @@ import os
 import requests
 import json
 import time
+from datetime import datetime
 from thefuzz import fuzz, process
+
+# IMPORTAÇÃO DOS MÓDULOS DE UTILITÁRIOS
 from utils import carregar_json, salvar_json
 
+# --- Constantes e Configurações ---
 ARQUIVO_CACHE_IDS = 'sofascore_id_cache.json'
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'application/json',
+    'Cache-Control': 'no-cache'
+}
+
+
+# --- NOVA FUNÇÃO ADICIONADA ---
+def buscar_jogos_do_dia_sofascore(data: str):
+    """
+    Busca todos os eventos de futebol agendados para uma data específica no SofaScore.
+    A data deve estar no formato 'YYYY-MM-DD'.
+    """
+    print(f"--- 📡 Buscando jogos do dia {data} no SofaScore... ---")
+    url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{data}"
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        response.raise_for_status()
+        dados = response.json()
+        jogos_do_dia = []
+        for jogo_data in dados.get('events', []):
+            # Ignoramos jogos que não sejam do gênero masculino para evitar duplicatas (ex: times femininos)
+            if jogo_data.get('homeTeam', {}).get('gender') != 'M':
+                continue
+
+            jogo = {
+                "id_sofascore": jogo_data.get('id'),
+                "liga": jogo_data.get('tournament', {}).get('name', 'N/A'),
+                "pais": jogo_data.get('tournament', {}).get('category', {}).get('name', 'N/A'),
+                "time_casa": jogo_data.get('homeTeam', {}).get('name', 'N/A'),
+                "time_fora": jogo_data.get('awayTeam', {}).get('name', 'N/A'),
+                "horario_inicio_utc": datetime.fromtimestamp(jogo_data.get('startTimestamp', 0)).isoformat()
+            }
+            jogos_do_dia.append(jogo)
+        print(f"  -> ✅ Sucesso! Encontrados {len(jogos_do_dia)} jogos para hoje.")
+        return jogos_do_dia
+    except requests.exceptions.RequestException as e:
+        print(f"  -> ❌ ERRO ao buscar jogos do dia: {e}")
+        return []
+
+# --- FUNÇÕES DO MÓDULO IN-PLAY (ADICIONADAS) ---
 
 def buscar_jogos_ao_vivo():
+    """Busca todos os eventos de futebol que estão acontecendo ao vivo no SofaScore."""
     print("--- 📡 Buscando jogos ao vivo no SofaScore... ---")
     url = "https://api.sofascore.com/api/v1/sport/football/events/live"
     try:
@@ -35,11 +80,13 @@ def buscar_jogos_ao_vivo():
         return []
 
 def buscar_estatisticas_ao_vivo(id_do_jogo: int):
+    """Busca as estatísticas detalhadas de um único jogo que está ao vivo."""
     if not id_do_jogo: return None
     url = f"https://api.sofascore.com/api/v1/event/{id_do_jogo}/statistics"
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code != 200: return None
+        if response.status_code != 200:
+            return None
         dados_stats = response.json().get('statistics', [])
         estatisticas_formatadas = {}
         for grupo in dados_stats:
@@ -51,9 +98,10 @@ def buscar_estatisticas_ao_vivo(id_do_jogo: int):
                         stats_items[item.get('name')] = {'casa': item.get('home'), 'fora': item.get('away')}
                     estatisticas_formatadas[nome_grupo] = stats_items
         return estatisticas_formatadas
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ❌ ERRO ao buscar estatísticas do jogo ID {id_do_jogo}: {e}")
+    except requests.exceptions.RequestException:
         return None
+
+# --- SUAS FUNÇÕES ORIGINAIS E INTELIGENTES (RESTAURADAS) ---
 
 def obter_sofascore_id(nome_time, cache_ids):
     if nome_time in cache_ids:
@@ -66,6 +114,7 @@ def obter_sofascore_id(nome_time, cache_ids):
     try:
         search_url = f"https://api.sofascore.com/api/v1/search/all?q={nome_para_busca}"
         res = requests.get(search_url, headers=HEADERS, timeout=10)
+        res.raise_for_status()
         search_data = res.json()
         resultados_times = [r['entity'] for r in search_data.get('results', []) if r.get('type') == 'team' and r['entity'].get('sport', {}).get('name') == 'Football' and r['entity'].get('gender') == 'M']
         if not resultados_times:
@@ -87,24 +136,30 @@ def obter_sofascore_id(nome_time, cache_ids):
 
 def consultar_estatisticas_escanteios(time_name, cache_execucao, num_jogos_analise):
     time_id = obter_sofascore_id(time_name, carregar_json(ARQUIVO_CACHE_IDS))
-    if not time_id: return None
+    if not time_id:
+        return None
     cache_key = f"cantos_{time_id}"
-    if cache_key in cache_execucao: return cache_execucao[cache_key]
+    if cache_key in cache_execucao:
+        return cache_execucao[cache_key]
     print(f"  -> 📊 [Sofascore] Buscando estatísticas de escanteios para o time ID: {time_id}")
     try:
         events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/0"
         res = requests.get(events_url, headers=HEADERS, timeout=10)
+        res.raise_for_status()
         eventos = res.json().get('events', [])
         lista_total_cantos = []
         jogos_analisados = 0
         for evento in eventos:
-            if jogos_analisados >= num_jogos_analise: break
-            if evento.get('status', {}).get('code') != 100: continue
+            if jogos_analisados >= num_jogos_analise:
+                break
+            if evento.get('status', {}).get('code') != 100:
+                continue
             id_partida = evento['id']
             stats_url = f"https://api.sofascore.com/api/v1/event/{id_partida}/statistics"
             time.sleep(1.5)
             res_stats = requests.get(stats_url, headers=HEADERS, timeout=10)
-            if res_stats.status_code != 200: continue
+            if res_stats.status_code != 200:
+                continue
             dados_stats = res_stats.json().get('statistics', [])
             for grupo in dados_stats:
                 if grupo.get('period') == 'ALL' and grupo.get('groups'):
@@ -129,7 +184,8 @@ def consultar_estatisticas_escanteios(time_name, cache_execucao, num_jogos_anali
         return None
 
 def consultar_forma_sofascore(nome_time, cache_execucao, num_jogos=6):
-    if nome_time in cache_execucao: return cache_execucao[nome_time]
+    if nome_time in cache_execucao:
+        return cache_execucao[nome_time]
     time_id = obter_sofascore_id(nome_time, carregar_json(ARQUIVO_CACHE_IDS))
     if not time_id:
         print(f"        -> Falha: Não foi possível encontrar o ID do time '{nome_time}' para consultar a forma.")
@@ -137,15 +193,18 @@ def consultar_forma_sofascore(nome_time, cache_execucao, num_jogos=6):
     try:
         events_url = f"https://api.sofascore.com/api/v1/team/{time_id}/events/last/0"
         res = requests.get(events_url, headers=HEADERS, timeout=10)
+        res.raise_for_status()
         events_data = res.json().get('events', [])
         forma, total_gols_lista = [], []
         for jogo in events_data[:num_jogos]:
-            if jogo['status']['code'] != 100: continue
+            if jogo['status']['code'] != 100:
+                continue
             placar_casa, placar_fora = jogo['homeScore']['current'], jogo['awayScore']['current']
             total_gols_lista.append(placar_casa + placar_fora)
             resultado = 'E' if placar_casa == placar_fora else ('V' if (jogo['homeTeam']['id'] == time_id and placar_casa > placar_fora) or (jogo['awayTeam']['id'] == time_id and placar_fora > placar_casa) else 'D')
             forma.append(resultado)
-        if not forma: return None
+        if not forma:
+            return None
         relatorio_time = {"forma": ''.join(forma[::-1]), "media_gols_partida": sum(total_gols_lista) / len(total_gols_lista)}
         cache_execucao[nome_time] = relatorio_time
         return relatorio_time
@@ -155,17 +214,20 @@ def consultar_forma_sofascore(nome_time, cache_execucao, num_jogos=6):
 
 def consultar_classificacao_sofascore(id_liga, id_temporada, cache):
     cache_key = f"{id_liga}-{id_temporada}"
-    if cache_key in cache: return cache[cache_key]
+    if cache_key in cache:
+        return cache[cache_key]
     print(f"  -> CONTEXTO [Sofascore] Buscando tabela de classificação para liga {id_liga}...")
     try:
         url = f"https://api.sofascore.com/api/v1/unique-tournament/{id_liga}/season/{id_temporada}/standings/total"
         res = requests.get(url, headers=HEADERS, timeout=10)
+        res.raise_for_status()
         dados = res.json().get('standings', [{}])[0].get('rows', [])
         tabela = [{"posicao": time_info['position'], "nome": time_info['team']['name']} for time_info in dados]
         cache[cache_key] = tabela
         time.sleep(3)
         return tabela
-    except Exception:
+    except Exception as e:
+        print(f"   -> Erro ao buscar classificação: {e}")
         cache[cache_key] = []
         return []
 
