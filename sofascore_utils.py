@@ -4,6 +4,7 @@ import json
 import time
 from datetime import datetime
 from thefuzz import fuzz, process
+from playwright.sync_api import sync_playwright, Error
 
 # IMPORTAÇÃO DOS MÓDULOS DE UTILITÁRIOS
 from utils import carregar_json, salvar_json
@@ -14,73 +15,92 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Accept': 'application/json',
     'Cache-Control': 'no-cache',
-    'Referer': 'https://www.sofascore.com/' # <-- HEADER ADICIONADO
+    'Referer': 'https://www.sofascore.com/'
 }
 
-
-# --- NOVA FUNÇÃO ADICIONADA ---
-def buscar_jogos_do_dia_sofascore(data: str):
-    """
-    Busca todos os eventos de futebol agendados para uma data específica no SofaScore.
-    A data deve estar no formato 'YYYY-MM-DD'.
-    """
-    print(f"--- 📡 Buscando jogos do dia {data} no SofaScore... ---")
-    url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{data}"
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        response.raise_for_status()
-        dados = response.json()
-        jogos_do_dia = []
-        for jogo_data in dados.get('events', []):
-            if jogo_data.get('homeTeam', {}).get('gender') != 'M':
-                continue
+# --- FUNÇÃO AUXILIAR DO PLAYWRIGHT ---
+def fetch_url_com_playwright(url):
+    """Usa o Playwright para buscar o conteúdo de uma URL de API, driblando desafios."""
+    with sync_playwright() as p:
+        browser = None # Inicializa para garantir que a variável exista
+        try:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.set_extra_http_headers(HEADERS)
+            response = page.goto(url, timeout=30000, wait_until='domcontentloaded')
             
-            jogo = {
-                "id_sofascore": jogo_data.get('id'),
-                "liga": jogo_data.get('tournament', {}).get('name', 'N/A'),
-                "pais": jogo_data.get('tournament', {}).get('category', {}).get('name', 'N/A'),
-                "time_casa": jogo_data.get('homeTeam', {}).get('name', 'N/A'),
-                "time_fora": jogo_data.get('awayTeam', {}).get('name', 'N/A'),
-                "horario_inicio_utc": datetime.fromtimestamp(jogo_data.get('startTimestamp', 0)).isoformat()
-            }
-            jogos_do_dia.append(jogo)
-        print(f"  -> ✅ Sucesso! Encontrados {len(jogos_do_dia)} jogos para hoje.")
-        return jogos_do_dia
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ❌ ERRO ao buscar jogos do dia: {e}")
-        return []
+            if response and response.ok:
+                json_content = response.json()
+                browser.close()
+                return json_content
+            else:
+                status = response.status if response else "N/A"
+                print(f"  -> AVISO: Playwright recebeu status {status} para a URL: {url}")
+                if browser.is_connected():
+                    browser.close()
+                return None
+        except Error as e:
+            print(f"  -> ❌ ERRO no Playwright ao buscar URL: {e}")
+            if browser and browser.is_connected():
+                browser.close()
+            return None
 
-# --- FUNÇÕES DO MÓDULO IN-PLAY (ADICIONADAS) ---
+# --- FUNÇÕES DE BUSCA PRINCIPAIS (ATUALIZADAS COM PLAYWRIGHT) ---
+
+def buscar_jogos_do_dia_sofascore(data: str):
+    print(f"--- 📡 Buscando jogos do dia {data} no SofaScore (via Playwright)... ---")
+    url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{data}"
+    dados = fetch_url_com_playwright(url)
+    
+    if not dados:
+        print(f"  -> ❌ ERRO: Não foi possível buscar jogos do dia.")
+        return []
+        
+    jogos_do_dia = []
+    for jogo_data in dados.get('events', []):
+        if jogo_data.get('homeTeam', {}).get('gender') != 'M':
+            continue
+        
+        jogo = {
+            "id_sofascore": jogo_data.get('id'),
+            "liga": jogo_data.get('tournament', {}).get('name', 'N/A'),
+            "pais": jogo_data.get('tournament', {}).get('category', {}).get('name', 'N/A'),
+            "time_casa": jogo_data.get('homeTeam', {}).get('name', 'N/A'),
+            "time_fora": jogo_data.get('awayTeam', {}).get('name', 'N/A'),
+            "horario_inicio_utc": datetime.fromtimestamp(jogo_data.get('startTimestamp', 0)).isoformat()
+        }
+        jogos_do_dia.append(jogo)
+    print(f"  -> ✅ Sucesso! Encontrados {len(jogos_do_dia)} jogos para hoje.")
+    return jogos_do_dia
 
 def buscar_jogos_ao_vivo():
-    """Busca todos os eventos de futebol que estão acontecendo ao vivo no SofaScore."""
-    print("--- 📡 Buscando jogos ao vivo no SofaScore... ---")
+    print("--- 📡 Buscando jogos ao vivo no SofaScore (via Playwright)... ---")
     url = "https://api.sofascore.com/api/v1/sport/football/events/live"
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        response.raise_for_status()
-        dados = response.json()
-        jogos_ao_vivo = []
-        for jogo_data in dados.get('events', []):
-            jogo = {
-                "id_sofascore": jogo_data.get('id'),
-                "liga": jogo_data.get('tournament', {}).get('name', 'N/A'),
-                "pais": jogo_data.get('tournament', {}).get('category', {}).get('name', 'N/A'),
-                "time_casa": jogo_data.get('homeTeam', {}).get('name', 'N/A'),
-                "time_fora": jogo_data.get('awayTeam', {}).get('name', 'N/A'),
-                "placar_casa": jogo_data.get('homeScore', {}).get('current', 0),
-                "placar_fora": jogo_data.get('awayScore', {}).get('current', 0),
-                "tempo_jogo": jogo_data.get('status', {}).get('description', 'N/A')
-            }
-            jogos_ao_vivo.append(jogo)
-        print(f"  -> ✅ Sucesso! Encontrados {len(jogos_ao_vivo)} jogos acontecendo agora.")
-        return jogos_ao_vivo
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ❌ ERRO ao buscar jogos ao vivo: {e}")
+    dados = fetch_url_com_playwright(url)
+
+    if not dados:
+        print(f"  -> ❌ ERRO: Não foi possível buscar jogos ao vivo.")
         return []
 
+    jogos_ao_vivo = []
+    for jogo_data in dados.get('events', []):
+        jogo = {
+            "id_sofascore": jogo_data.get('id'),
+            "liga": jogo_data.get('tournament', {}).get('name', 'N/A'),
+            "pais": jogo_data.get('tournament', {}).get('category', {}).get('name', 'N/A'),
+            "time_casa": jogo_data.get('homeTeam', {}).get('name', 'N/A'),
+            "time_fora": jogo_data.get('awayTeam', {}).get('name', 'N/A'),
+            "placar_casa": jogo_data.get('homeScore', {}).get('current', 0),
+            "placar_fora": jogo_data.get('awayScore', {}).get('current', 0),
+            "tempo_jogo": jogo_data.get('status', {}).get('description', 'N/A')
+        }
+        jogos_ao_vivo.append(jogo)
+    print(f"  -> ✅ Sucesso! Encontrados {len(jogos_ao_vivo)} jogos acontecendo agora.")
+    return jogos_ao_vivo
+
+# --- SUAS FUNÇÕES ORIGINAIS (USANDO REQUESTS) ---
+
 def buscar_estatisticas_ao_vivo(id_do_jogo: int):
-    """Busca as estatísticas detalhadas de um único jogo que está ao vivo."""
     if not id_do_jogo: return None
     url = f"https://api.sofascore.com/api/v1/event/{id_do_jogo}/statistics"
     try:
@@ -100,8 +120,6 @@ def buscar_estatisticas_ao_vivo(id_do_jogo: int):
         return estatisticas_formatadas
     except requests.exceptions.RequestException:
         return None
-
-# --- SUAS FUNÇÕES ORIGINAIS E INTELIGENTES (RESTAURADAS) ---
 
 def obter_sofascore_id(nome_time, cache_ids):
     if nome_time in cache_ids:
