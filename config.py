@@ -8,7 +8,7 @@ DOTENV_PATH = os.path.join(os.path.dirname(__file__), '.env')
 # Cria uma instância de configuração que LÊ ESSE ARQUIVO ESPECÍFICO
 env_config = Config(RepositoryEnv(DOTENV_PATH))
 
-# --- CHAVES DE ACESSO E TOKENS (LIDOS DO ARQUIVO .ENV) ---
+# --- CHAVES DE ACESSO E TOKENS ---
 TELEGRAM_TOKEN = env_config('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = env_config('TELEGRAM_CHAT_ID')
 API_KEY_ODDS = env_config('API_KEY_ODDS')
