@@ -5,8 +5,7 @@
 sofascore_id_cache.json
 sofascore_cache.json
 *.log
-betano_output.html
-oddsportal_output.html
+*.html
 
 # Pastas de ambiente virtual
 venv/
