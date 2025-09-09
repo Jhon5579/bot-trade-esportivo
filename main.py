@@ -1,6 +1,3 @@
-# Arquivo: main.py
-# Descrição: Orquestrador principal do bot Falcão das Odds.
-
 import os
 import requests
 import json
@@ -12,6 +9,7 @@ import pandas as pd
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
 from sofascore_utils import (
+    buscar_jogos_do_dia_sofascore, # <-- NOVA FUNÇÃO EM USO!
     consultar_classificacao_sofascore,
     consultar_estatisticas_escanteios,
     consultar_forma_sofascore,
@@ -35,7 +33,7 @@ ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
 CASA_ALVO = 'pinnacle'
 ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
 ARQUIVO_HISTORICO_ODDS = 'historico_odds.json'
-ARQUIVO_CACHE_SOFASCORE = 'sofascore_cache.json' # Novo arquivo de cache
+ARQUIVO_CACHE_SOFASCORE = 'sofascore_cache.json'
 
 # --- 2. FUNÇÕES DE SUPORTE ---
 
@@ -154,64 +152,50 @@ def calcular_estatisticas_historicas(df):
 def calcular_estatisticas_por_liga(df):
     print("  -> 📊 Calculando estatísticas médias por liga...")
     NOME_COLUNA_LIGA = 'League'
-
     if df.empty or NOME_COLUNA_LIGA not in df.columns:
         print(f"  -> ⚠️ AVISO: Coluna da liga ('{NOME_COLUNA_LIGA}') não encontrada. As estatísticas de liga não serão usadas.")
         return {}
-
     cols_stats = ['FTHG', 'FTAG', 'HC', 'AC', 'HY', 'AY']
     for col in cols_stats:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
     df['TotalGols'] = df['FTHG'] + df['FTAG']
     df['TotalCantos'] = df['HC'] + df['AC']
     df['TotalCartoesAmarelos'] = df['HY'] + df['AY']
-
     stats_ligas = df.groupby(NOME_COLUNA_LIGA).agg(
         avg_gols_por_jogo=('TotalGols', 'mean'),
         avg_cantos_por_jogo=('TotalCantos', 'mean'),
         avg_cartoes_por_jogo=('TotalCartoesAmarelos', 'mean')
     ).to_dict('index')
-
     print(f"  -> Médias calculadas para {len(stats_ligas)} ligas.")
     return stats_ligas
 
 def pre_buscar_dados_sofascore(jogos_do_dia):
     print("\n--- 🧠 Pré-buscando dados do Sofascore com cache persistente ---")
-
     cache_persistente = carregar_json(ARQUIVO_CACHE_SOFASCORE)
     cache_alterado = False
 
     times_unicos = set()
     for jogo in jogos_do_dia:
-        times_unicos.add(jogo['home_team'])
-        times_unicos.add(jogo['away_team'])
+        times_unicos.add(jogo['time_casa'])
+        times_unicos.add(jogo['time_fora'])
 
     print(f"  -> Encontrados {len(times_unicos)} times únicos para buscar dados.")
-
     agora = datetime.now(timezone.utc)
 
     for i, time_nome in enumerate(list(times_unicos)):
         dados_time = cache_persistente.get(time_nome)
-
         if dados_time:
             timestamp_cache = datetime.fromisoformat(dados_time['timestamp'])
             idade_cache = agora - timestamp_cache
             if idade_cache < timedelta(hours=CACHE_EXPIRATION_HOURS):
                 print(f"  -> [CACHE HIT] Usando dados em cache para: {time_nome}")
                 continue
-
         print(f"  -> [CACHE MISS] Buscando novos dados para: {time_nome} ({i+1}/{len(times_unicos)})")
         cache_temporario_para_funcao = {}
         novo_dado = consultar_forma_sofascore(time_nome, cache_temporario_para_funcao)
-
         if novo_dado:
-            cache_persistente[time_nome] = {
-                'data': novo_dado,
-                'timestamp': agora.isoformat()
-            }
+            cache_persistente[time_nome] = { 'data': novo_dado, 'timestamp': agora.isoformat() }
             cache_alterado = True
-
         time.sleep(2)
 
     if cache_alterado:
@@ -219,37 +203,8 @@ def pre_buscar_dados_sofascore(jogos_do_dia):
         salvar_json(cache_persistente, ARQUIVO_CACHE_SOFASCORE)
 
     cache_execucao_final = {time: dados['data'] for time, dados in cache_persistente.items() if 'data' in dados}
-
     print("  -> ✅ Pré-busca de dados do Sofascore concluída.")
     return cache_execucao_final
-
-def salvar_odds_futuras(jogos_do_dia):
-    print("  -> 💾 Salvando odds de jogos futuros para análise de mercado...")
-    historico_odds = carregar_json(ARQUIVO_HISTORICO_ODDS)
-    agora = datetime.now(timezone.utc)
-    novas_odds_salvas = 0
-
-    for jogo in jogos_do_dia:
-        jogo_id = jogo['id']
-        if jogo_id in historico_odds:
-            continue
-
-        inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
-
-        if (inicio_jogo_dt - agora) > timedelta(hours=22):
-            odds = extrair_odds_principais(jogo)
-            if odds and odds.get('h2h'):
-                historico_odds[jogo_id] = {
-                    "home_team": jogo['home_team'],
-                    "away_team": jogo['away_team'],
-                    "commence_time": jogo['commence_time'],
-                    "opening_odds": odds['h2h']
-                }
-                novas_odds_salvas += 1
-
-    if novas_odds_salvas > 0:
-        salvar_json(historico_odds, ARQUIVO_HISTORICO_ODDS)
-        print(f"  -> {novas_odds_salvas} novas odds de jogos futuros foram salvas.")
 
 # --- 4. FUNÇÕES DE ORQUESTRAÇÃO ---
 
@@ -404,230 +359,165 @@ def gerar_e_enviar_resumo_semanal():
         f.write(str(hoje))
     print(f"✅ Relatório semanal enviado com sucesso! Ficheiro de controlo '{nome_arquivo_flag}' criado.")
 
-# --- 5. FUNÇÃO PRINCIPAL ---
-
+# --- 5. FUNÇÃO PRINCIPAL (TOTALMENTE REESTRUTURADA) ---
 def rodar_analise_completa():
     gerar_e_enviar_resumo_diario()
     gerar_e_enviar_resumo_semanal()
     verificar_apostas_pendentes_sofascore()
 
-    print(f"\n--- 🦅 Iniciando busca... ---")
+    print(f"\n--- 🦅 Iniciando ciclo de análise (SofaScore-centric)... ---")
 
-    url_base = f"https://api.the-odds-api.com/v4/sports/soccer/odds?apiKey={API_KEY_ODDS}&regions=eu,us,uk,au&bookmakers={CASA_ALVO}&oddsFormat=decimal"
-    url_jogos_principais = f"{url_base}&markets=h2h,totals"
-    jogos_do_dia = []
-    try:
-        response_jogos = requests.get(url_jogos_principais, timeout=30)
-        response_jogos.raise_for_status()
-        jogos_do_dia = response_jogos.json()
-    except requests.exceptions.RequestException as e:
-        print(f"  > ERRO na busca principal de jogos: {e}")
+    # ETAPA 1: BUSCAR A LISTA COMPLETA DE JOGOS DO SOFASCORE
+    hoje_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    jogos_do_dia_sofascore = buscar_jogos_do_dia_sofascore(hoje_str)
+
+    if not jogos_do_dia_sofascore:
+        print("Nenhum jogo encontrado no SofaScore para hoje. Encerrando o ciclo.")
         return
 
-    url_jogos_btts = f"{url_base}&markets=both_teams_to_score"
-    dados_btts = {}
+    # ETAPA 2: BUSCAR AS ODDS DISPONÍVEIS NA THE ODDS API
+    print("\n--- 💰 Buscando as poucas odds disponíveis na The Odds API... ---")
+    url_odds = f"https://api.the-odds-api.com/v4/sports/soccer/odds?apiKey={API_KEY_ODDS}&regions=eu,us,uk,au&bookmakers={CASA_ALVO}&oddsFormat=decimal&markets=h2h,totals,both_teams_to_score"
+    jogos_com_odds_api_raw = []
     try:
-        response_btts = requests.get(url_jogos_btts, timeout=30)
-        response_btts.raise_for_status()
-        jogos_com_btts = response_btts.json()
-        dados_btts = {jogo['id']: jogo for jogo in jogos_com_btts}
-        print(f"  -> Encontradas odds de BTTS para {len(dados_btts)} jogos.")
+        response_odds = requests.get(url_odds, timeout=30)
+        response_odds.raise_for_status()
+        jogos_com_odds_api_raw = response_odds.json()
+        print(f"  -> Encontradas odds para {len(jogos_com_odds_api_raw)} jogos.")
     except requests.exceptions.RequestException as e:
-        print(f"  > ERRO na busca de odds BTTS: {e}")
+        print(f"  -> ⚠️ AVISO: Não foi possível buscar odds da The Odds API: {e}")
 
-    salvar_odds_futuras(jogos_do_dia)
-
+    # ETAPA 3: PREPARAR O CONTEXTO E O CACHE
+    print("\n--- 🧠 Preparando contexto e dados estatísticos... ---")
     contexto = {
         "cache_execucao": {},
         "cache_classificacao": {},
         "mapa_ligas": carregar_json(ARQUIVO_MAPA_LIGAS),
         "stats_individuais": {},
         "stats_h2h": {},
-        "dados_btts": dados_btts,
-        "historico_odds": carregar_json(ARQUIVO_HISTORICO_ODDS),
         "stats_ligas": {}
     }
-
-    if jogos_do_dia:
-        contexto['cache_execucao'] = pre_buscar_dados_sofascore(jogos_do_dia)
-
+    contexto['cache_execucao'] = pre_buscar_dados_sofascore(jogos_do_dia_sofascore)
     try:
         df_historico = pd.read_csv(ARQUIVO_HISTORICO_CORRIGIDO, low_memory=False)
         contexto["stats_individuais"], contexto["stats_h2h"] = calcular_estatisticas_historicas(df_historico)
         contexto["stats_ligas"] = calcular_estatisticas_por_liga(df_historico.copy())
     except FileNotFoundError:
-        print(f"  -> ⚠️ AVISO: Arquivo '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado. Estratégias históricas desativadas.")
+        print(f"  -> ⚠️ AVISO: Arquivo histórico não encontrado. Estratégias de histórico desativadas.")
 
-    jogos_analisados = 0
-    apostas_feitas_neste_ciclo = []
-    alertas_enviados_neste_ciclo = 0
-
+    # ETAPA 4: ANALISAR TODOS OS JOGOS DO SOFASCORE
+    print(f"\n--- 🔬 Analisando os {len(jogos_do_dia_sofascore)} jogos encontrados... ---")
     apostas_pendentes_atuais = carregar_json(ARQUIVO_PENDENTES)
-    ids_apostas_pendentes = {aposta['id_api'] for aposta in apostas_pendentes_atuais}
+    ids_apostas_pendentes = {aposta.get('id_sofascore') for aposta in apostas_pendentes_atuais}
 
-    if jogos_do_dia:
-        fuso_brasilia, fuso_utc = timezone(timedelta(hours=-3)), timezone.utc
-        agora_utc = datetime.now(timezone.utc)
-
-        lista_de_funcoes = [
-            analisar_tendencia_escanteios, analisar_ambas_marcam, analisar_lider_vs_lanterna,
-            analisar_reacao_gigante, analisar_fortaleza_defensiva, analisar_classico_de_gols,
-            analisar_goleador_casa, analisar_visitante_fraco, analisar_mandante_fraco, analisar_favoritos_em_niveis,
-            # analisar_duelo_tatico, # DESATIVADA
-            analisar_mercado_otimista, analisar_consenso_de_gols,
-            analisar_consenso_de_defesa, analisar_linha_esticada, analisar_zebra_valorosa,
-            analisar_favorito_conservador, analisar_pressao_mercado,
-            analisar_dominio_em_cantos, analisar_pressao_ofensiva, analisar_jogo_agressivo,
-            analisar_pressao_ofensiva_extrema
-        ]
-
-        for jogo in jogos_do_dia:
-            if jogo['id'] in ids_apostas_pendentes:
-                print(f"\n-> Jogo '{jogo['home_team']} vs {jogo['away_team']}' já possui uma aposta pendente. Pulando análise.")
-                continue
-
-            time_casa, time_fora = jogo['home_team'], jogo['away_team']
-            if not jogo.get('bookmakers'):
-                continue
-
-            inicio_jogo_dt = datetime.fromisoformat(jogo['commence_time'].replace('Z', '+00:00'))
-            is_live = inicio_jogo_dt < agora_utc
-
-            jogos_analisados += 1
-            print(f"\n--------------------------------------------------\nAnalisando Jogo: {time_casa} vs {time_fora}{' (AO VIVO)' if is_live else ''}")
-
-            for func in lista_de_funcoes:
-                try:
-                    oportunidade = func(jogo, contexto)
-                except NameError:
-                    continue
-
-                if not oportunidade:
-                    continue
-
-                if oportunidade.get('type') == 'alerta':
-                    print(f"   -> ✅ ALERTA ENCONTRADO: {oportunidade['nome_estrategia']}")
-                    alertas_enviados_neste_ciclo += 1
-                    data_hora = inicio_jogo_dt.astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
-
-                    linhas_alerta = [
-                        f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*", "",
-                        f"*⚽ JOGO:* {time_casa} vs {time_fora}", f"*🏆 LIGA:* {jogo.get('sport_title', 'N/A')}", f"*🗓️ DATA:* {data_hora}", "",
-                        "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_",
-                    ]
-
-                    if "OBSERVAÇÃO AO VIVO" in oportunidade.get('nome_estrategia', ''):
-                        linhas_alerta.extend(["", "_*NOTA: Isto é apenas um alerta de observação. Nenhuma aposta foi feita._"])
-
-                    alerta = "\n".join(linhas_alerta)
-                    enviar_alerta_telegram(alerta)
-
-                elif oportunidade.get('type') == 'aposta':
-                    if is_live:
-                        print(f"  -> ⚠️ Oportunidade de APOSTA encontrada em jogo AO VIVO. Convertendo para ALERTA (Modo Observação).")
-                        alertas_enviados_neste_ciclo += 1
-                        data_hora = inicio_jogo_dt.astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
-                        mercado_str = oportunidade['mercado']
-                        if "Mais de" in mercado_str or "Menos de" in mercado_str:
-                            mercado_str += " Gols"
-
-                        odd_da_aposta = oportunidade.get('odd', 'N/A')
-                        # risco_calculado = classificar_odd(odd_da_aposta) # A função classificar_odd não foi fornecida no código original
-
-                        linhas_alerta = [
-                            f"*{oportunidade['emoji']} OPORTUNIDADE AO VIVO (OBSERVAÇÃO) {oportunidade['emoji']}*", "",
-                            f"*Estratégia:* {oportunidade['nome_estrategia']}", "",
-                            f"*⚽ JOGO:* {time_casa} vs {time_fora}",
-                            f"*📈 MERCADO SUGERIDO:* {mercado_str}",
-                            f"*📊 ODD NO MOMENTO:* *{odd_da_aposta}*",
-                            # f"⚖️ *Risco Percebido:* {risco_calculado}",
-                            "",
-                            "*🔍 Análise do Falcão:*", f"_{oportunidade.get('motivo', 'N/A')}_", "",
-                            "_*NOTA: Isto é apenas um alerta de observação. Nenhuma aposta foi feita._"
-                        ]
-                        alerta = "\n".join(linhas_alerta)
-                        enviar_alerta_telegram(alerta)
-                    else:
-                        if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
-                            print(f"  -> ✅ OPORTUNIDADE PRÉ-JOGO APROVADA ({oportunidade['odd']} >= {ODD_MINIMA_GLOBAL})")
-                            apostas_feitas_neste_ciclo.append(oportunidade)
-
-                            banca = carregar_banca()
-                            stake = calcular_stake(oportunidade['odd'], banca)
-                            saldo_atual = banca.get('banca_atual')
-
-                            data_hora = inicio_jogo_dt.astimezone(fuso_brasilia).strftime('%d/%m/%Y às %H:%M')
-                            mercado_str = oportunidade['mercado']
-                            if "Mais de" in mercado_str or "Menos de" in mercado_str:
-                                mercado_str += " Gols"
-
-                            odd_da_aposta = oportunidade.get('odd')
-                            # risco_calculado = classificar_odd(odd_da_aposta) # A função classificar_odd não foi fornecida no código original
-
-                            linhas_alerta = [
-                                f"*{oportunidade['emoji']} ENTRADA VALIDADA ({oportunidade['nome_estrategia']}) {oportunidade['emoji']}*", "",
-                                f"*⚽ JOGO:* {time_casa} vs {time_fora}",
-                                f"*📈 MERCADO:* {mercado_str}",
-                                f"*📊 ODD ENCONTRADA:* *{odd_da_aposta}*",
-                                # f"⚖️ *Risco Percebido:* {risco_calculado}",
-                                f"*💰 STAKE SUGERIDA:* *R$ {stake:.2f}*", "",
-                                f"*🏦 Saldo Pré-Aposta:* R$ {saldo_atual:.2f}"
-                            ]
-
-                            if 'motivo' in oportunidade and oportunidade['motivo']:
-                                linhas_alerta.extend(["", "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_"])
-
-                            alerta = "\n".join(linhas_alerta)
-                            enviar_alerta_telegram(alerta)
-
-                            timestamp_utc = inicio_jogo_dt.replace(tzinfo=timezone.utc).timestamp()
-                            nova_aposta = {
-                                "id_api": jogo['id'], "nome_jogo": f"{time_casa} vs {time_fora}", "time_casa": time_casa,
-                                "time_fora": time_fora, "mercado": oportunidade['mercado'], "timestamp": int(timestamp_utc),
-                                "estrategia": oportunidade['nome_estrategia'], "odd": oportunidade['odd'], "stake": stake
-                            }
-                            apostas_pendentes = carregar_json(ARQUIVO_PENDENTES)
-                            apostas_pendentes.append(nova_aposta)
-                            salvar_json(apostas_pendentes, ARQUIVO_PENDENTES)
-                        else:
-                            print(f"  -> ❌ OPORTUNIDADE PRÉ-JOGO REPROVADA PELA ODD MÍNIMA ({oportunidade.get('odd', 0)} < {ODD_MINIMA_GLOBAL})")
-
-    print("\n--- Análise deste ciclo finalizada. Gerando relatório de status... ---")
-
-    apostas_pendentes_final = carregar_json(ARQUIVO_PENDENTES)
-    total_pendentes = len(apostas_pendentes_final)
-
-    texto_pendentes_lista = []
-    if total_pendentes > 0:
-        texto_pendentes_lista.append("\n\n*🔔 Apostas Pendentes:*")
-        for aposta in apostas_pendentes_final:
-            texto_pendentes_lista.append(f"- {aposta['nome_jogo']} ({aposta['mercado']})")
-    texto_pendentes = "\n".join(texto_pendentes_lista)
-
-    data_hoje_str = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
-
-    linhas_mensagem = [
-        f"🦅 *Relatório do Falcão da ODDS*", "", f"🗓️ *Data:* {data_hoje_str}", "-----------------------------------", "",
-        "🔍 *Resumo da Execução:*",
-        f"- *{jogos_analisados}* jogos analisados.",
-        f"- *{total_pendentes}* apostas estão em aberto no momento.", ""
+    lista_de_funcoes = [
+        analisar_tendencia_escanteios, analisar_ambas_marcam, analisar_lider_vs_lanterna,
+        analisar_reacao_gigante, analisar_fortaleza_defensiva, analisar_classico_de_gols,
+        analisar_goleador_casa, analisar_visitante_fraco, analisar_mandante_fraco,
+        analisar_favoritos_em_niveis, analisar_mercado_otimista, analisar_consenso_de_gols,
+        analisar_consenso_de_defesa, analisar_linha_esticada, analisar_zebra_valorosa,
+        analisar_favorito_conservador, analisar_pressao_mercado, analisar_dominio_em_cantos,
+        analisar_pressao_ofensiva, analisar_jogo_agressivo, analisar_pressao_ofensiva_extrema
     ]
 
-    novas_entradas_count = len(apostas_feitas_neste_ciclo)
-    if novas_entradas_count > 0:
-        linhas_mensagem.append(f"✅ *{novas_entradas_count}* nova(s) oportunidade(s) de aposta encontradas e enviadas!")
-    elif alertas_enviados_neste_ciclo > 0:
-        linhas_mensagem.append(f"⚠️ *{alertas_enviados_neste_ciclo}* novo(s) alerta(s) estatístico(s) enviados.")
-    else:
-        linhas_mensagem.append("🚫 *Nenhuma nova oportunidade ou alerta de alta qualidade encontrados neste ciclo.*")
+    for jogo_sofascore in jogos_do_dia_sofascore:
+        if jogo_sofascore['id_sofascore'] in ids_apostas_pendentes:
+            continue
 
-    if texto_pendentes:
-        linhas_mensagem.append(texto_pendentes)
+        time_casa_sf = jogo_sofascore['time_casa']
+        time_fora_sf = jogo_sofascore['time_fora']
+        print(f"\n--------------------------------------------------\nAnalisando Jogo: {time_casa_sf} vs {time_fora_sf}")
 
-    mensagem_status = "\n".join(linhas_mensagem)
-    enviar_alerta_telegram(mensagem_status)
+        melhor_match_odds = None
+        maior_pontuacao = 75 
+        for jogo_odd in jogos_com_odds_api_raw:
+            pontuacao = fuzz.token_set_ratio(f"{time_casa_sf} {time_fora_sf}", f"{jogo_odd['home_team']} {jogo_odd['away_team']}")
+            if pontuacao > maior_pontuacao:
+                maior_pontuacao = pontuacao
+                melhor_match_odds = jogo_odd
 
-# --- NOVA FUNÇÃO DE ORQUESTRAÇÃO PARA JOGOS AO VIVO (ADICIONADA) ---
+        # A função classificar_odd não foi fornecida no código original.
+        # As chamadas a ela serão omitidas para evitar erros.
+
+        jogo_unificado = {
+            "home_team": time_casa_sf,
+            "away_team": time_fora_sf,
+            "sport_title": jogo_sofascore['liga'],
+            "commence_time": jogo_sofascore['horario_inicio_utc'],
+            "id_sofascore": jogo_sofascore['id_sofascore'],
+            "bookmakers": melhor_match_odds.get('bookmakers', []) if melhor_match_odds else []
+        }
+
+        for func in lista_de_funcoes:
+            oportunidade = func(jogo_unificado, contexto)
+
+            if not oportunidade:
+                continue
+
+            if oportunidade.get('type') == 'alerta':
+                print(f"  -> ✅ ALERTA ENCONTRADO: {oportunidade['nome_estrategia']}")
+                data_hora = datetime.fromisoformat(jogo_unificado['commence_time']).astimezone(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
+                linhas_alerta = [
+                    f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*", "",
+                    f"*⚽ JOGO:* {time_casa_sf} vs {time_fora_sf}", f"*🏆 LIGA:* {jogo_unificado.get('sport_title', 'N/A')}", f"*🗓️ DATA:* {data_hora}", "",
+                    "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_",
+                ]
+                alerta = "\n".join(linhas_alerta)
+                enviar_alerta_telegram(alerta)
+
+            elif oportunidade.get('type') == 'aposta':
+                if oportunidade.get('odd'):
+                    print(f"  -> ✅ OPORTUNIDADE COM ODD ENCONTRADA! Estratégia: {oportunidade['nome_estrategia']}")
+                    if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
+                        print(f"  -> ✅ OPORTUNIDADE PRÉ-JOGO APROVADA ({oportunidade['odd']} >= {ODD_MINIMA_GLOBAL})")
+                        banca = carregar_banca()
+                        stake = calcular_stake(oportunidade['odd'], banca)
+                        saldo_atual = banca.get('banca_atual')
+                        data_hora = datetime.fromisoformat(jogo_unificado['commence_time']).astimezone(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y às %H:%M')
+
+                        linhas_alerta = [
+                            f"*{oportunidade['emoji']} ENTRADA VALIDADA ({oportunidade['nome_estrategia']}) {oportunidade['emoji']}*", "",
+                            f"*⚽ JOGO:* {time_casa_sf} vs {time_fora_sf}",
+                            f"*📈 MERCADO:* {oportunidade['mercado']}",
+                            f"*📊 ODD ENCONTRADA:* *{oportunidade['odd']}*",
+                            f"*💰 STAKE SUGERIDA:* *R$ {stake:.2f}*", "",
+                            f"*🏦 Saldo Pré-Aposta:* R$ {saldo_atual:.2f}"
+                        ]
+                        if 'motivo' in oportunidade and oportunidade['motivo']:
+                            linhas_alerta.extend(["", "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_"])
+                        alerta = "\n".join(linhas_alerta)
+                        enviar_alerta_telegram(alerta)
+
+                        timestamp_utc = datetime.fromisoformat(jogo_unificado['commence_time']).replace(tzinfo=timezone.utc).timestamp()
+                        nova_aposta = {
+                            "id_api": melhor_match_odds['id'] if melhor_match_odds else None, 
+                            "id_sofascore": jogo_unificado['id_sofascore'],
+                            "nome_jogo": f"{time_casa_sf} vs {time_fora_sf}", 
+                            "time_casa": time_casa_sf,
+                            "time_fora": time_fora_sf, 
+                            "mercado": oportunidade['mercado'], 
+                            "timestamp": int(timestamp_utc),
+                            "estrategia": oportunidade['nome_estrategia'], 
+                            "odd": oportunidade['odd'], 
+                            "stake": stake
+                        }
+                        apostas_pendentes_atuais.append(nova_aposta)
+                        salvar_json(apostas_pendentes_atuais, ARQUIVO_PENDENTES)
+                    else:
+                        print(f"  -> ❌ OPORTUNIDADE REPROVADA PELA ODD MÍNIMA ({oportunidade.get('odd', 0)} < {ODD_MINIMA_GLOBAL})")
+                else:
+                    print(f"  -> ✅ OPORTUNIDADE SEM ODD ENCONTRADA! Estratégia: {oportunidade['nome_estrategia']}")
+                    mensagem = f"*{oportunidade['emoji']} ENTRADA VALIDADA (SEM ODD) {oportunidade['emoji']}*\n\n"
+                    mensagem += f"*Estratégia:* {oportunidade['nome_estrategia']}\n"
+                    mensagem += f"*⚽ JOGO:* {time_casa_sf} vs {time_fora_sf}\n"
+                    mensagem += f"*📈 MERCADO SUGERIDO:* {oportunidade['mercado']}\n\n"
+                    mensagem += f"*🔍 Análise do Falcão:* _{oportunidade.get('motivo', 'N/A')}_\n\n"
+                    mensagem += "_NOTA: Verifique a odd na sua casa de apostas e decida se a entrada tem valor._"
+                    enviar_alerta_telegram(mensagem)
+
+                break 
+
+    print("\n--- Ciclo de análise finalizado. ---")
 
 def rodar_analise_ao_vivo():
     """
@@ -640,48 +530,31 @@ def rodar_analise_ao_vivo():
         print("  -> Nenhum jogo ao vivo encontrado no momento.")
         return
 
-    estrategias_in_play = [
-        # analisar_pressao_fim_de_jogo # Exemplo, a função precisa ser criada
-    ]
+    # A lista de estratégias ao vivo precisa ser definida.
+    # estrategias_in_play = [analisar_pressao_fim_de_jogo]
 
-    jogos_filtrados = [j for j in jogos_ao_vivo if 'half' in j.get('tempo_jogo', '').lower()]
-    print(f"  -> {len(jogos_filtrados)} jogos filtrados para análise aprofundada.")
+    # jogos_filtrados = [j for j in jogos_ao_vivo if 'half' in j.get('tempo_jogo', '').lower()]
+    # print(f"  -> {len(jogos_filtrados)} jogos filtrados para análise aprofundada.")
 
-    for jogo in jogos_filtrados:
-        estatisticas = buscar_estatisticas_ao_vivo(jogo['id_sofascore'])
-        time.sleep(1.5)
+    # for jogo in jogos_filtrados:
+    #     estatisticas = buscar_estatisticas_ao_vivo(jogo['id_sofascore'])
+    #     time.sleep(1.5)
 
-        if estatisticas:
-            for estrategia_func in estrategias_in_play:
-                oportunidade = estrategia_func(jogo, estatisticas)
-                if oportunidade:
-                    data_hora = datetime.now(timezone(timedelta(hours=-3))).strftime('%H:%M')
-
-                    linhas_alerta = [
-                        f"*{oportunidade['emoji']} {oportunidade['nome_estrategia']} {oportunidade['emoji']}*", "",
-                        f"*⚽ JOGO:* {jogo['time_casa']} vs {jogo['time_fora']}",
-                        f"*🏆 LIGA:* {jogo.get('liga', 'N/A')}",
-                        f"*⏰ PLACAR ATUAL:* {jogo['placar_casa']} - {jogo['placar_fora']} ({jogo['tempo_jogo']})", "",
-                        "*🔍 Análise do Falcão:*", f"_{oportunidade['motivo']}_",
-                    ]
-                    alerta = "\n".join(linhas_alerta)
-                    enviar_alerta_telegram(alerta)
+    #     if estatisticas:
+    #         for estrategia_func in estrategias_in_play:
+    #             oportunidade = estrategia_func(jogo, estatisticas)
+    #             if oportunidade:
+    #                 # Lógica para enviar alerta ao vivo
+    #                 pass
 
     print("--- 🏁 Análise de jogos ao vivo concluída. ---")
-
 
 # --- 6. PONTO DE ENTRADA ---
 if __name__ == "__main__":
     print("--- Iniciando execução única do bot ---")
-
     if not all([API_KEY_ODDS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
-        print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas nos Secrets.")
+        print("❌ ERRO FATAL: Chaves de API/Telegram não configuradas.")
     else:
-        try:
-            # Nota: A função classificar_odd() é chamada no código mas não foi definida.
-            # Você precisará adicioná-la ou remover as chamadas a ela.
-            rodar_analise_completa()
-            rodar_analise_ao_vivo()
-            print("\n--- Ciclo único de análise (Pré-jogo + Ao Vivo) concluído com sucesso. ---")
-        except Exception as e:
-            print(f"❌ Ocorreu um erro inesperado durante a execução: {e}")
+        rodar_analise_completa()
+        rodar_analise_ao_vivo()
+        print("\n--- Ciclo único de análise (Pré-jogo + Ao Vivo) concluído com sucesso. ---")
