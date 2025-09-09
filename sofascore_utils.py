@@ -13,7 +13,8 @@ ARQUIVO_CACHE_IDS = 'sofascore_id_cache.json'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Accept': 'application/json',
-    'Cache-Control': 'no-cache'
+    'Cache-Control': 'no-cache',
+    'Referer': 'https://www.sofascore.com/' # <-- HEADER ADICIONADO
 }
 
 
@@ -31,10 +32,9 @@ def buscar_jogos_do_dia_sofascore(data: str):
         dados = response.json()
         jogos_do_dia = []
         for jogo_data in dados.get('events', []):
-            # Ignoramos jogos que não sejam do gênero masculino para evitar duplicatas (ex: times femininos)
             if jogo_data.get('homeTeam', {}).get('gender') != 'M':
                 continue
-
+            
             jogo = {
                 "id_sofascore": jogo_data.get('id'),
                 "liga": jogo_data.get('tournament', {}).get('name', 'N/A'),
