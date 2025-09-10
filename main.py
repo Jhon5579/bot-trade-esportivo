@@ -1,32 +1,33 @@
-import os
+# main.py
+
 import requests
 import json
-from datetime import datetime, timezone, timedelta
-import time
-from thefuzz import fuzz, process
 import pandas as pd
+from thefuzz import fuzz
 
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
-from gestao_banca import carregar_banca, calcular_stake, registrar_resultado
-from utils import carregar_json, salvar_json
+# Garanta que seu arquivo config.py está usando a biblioteca 'decouple'
+# para ler as variáveis de ambiente que o GitHub Actions fornecerá.
 from config import *
 from estrategias import *
 from api_externas import buscar_jogos_api_football, buscar_odds_the_odds_api
+from utils import carregar_json
 
 # --- ARQUIVOS E CONSTANTES ---
-ARQUIVO_PENDENTES = 'apostas_pendentes.json'
-ARQUIVO_HISTORICO_APOSTAS = 'historico_de_apostas.json'
-ARQUIVO_RESULTADOS_DIA = 'resultados_do_dia.json'
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
-CASA_ALVO = 'pinnacle'
 ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
 
-# --- FUNÇÕES DE SUPORTE ---
+# --- FUNÇÕES DE COMUNICAÇÃO ---
 
 def enviar_alerta_telegram(mensagem):
+    """
+    Envia uma mensagem de aposta formatada para o canal/grupo no Telegram.
+    """
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("  -> AVISO: Tokens do Telegram não encontrados. Mensagem não enviada.")
         return
+        
+    # Escapa caracteres especiais para o modo MarkdownV2 do Telegram
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in caracteres_especiais:
         mensagem = mensagem.replace(char, f'\\{char}')
@@ -42,7 +43,13 @@ def enviar_alerta_telegram(mensagem):
     except Exception as e:
         print(f"  > ERRO de conexão com o Telegram: {e}")
 
+# --- FUNÇÕES DE PROCESSAMENTO DE DADOS ---
+
 def calcular_estatisticas_historicas(df):
+    """
+    Processa o DataFrame de dados históricos para calcular estatísticas de desempenho
+    dos times e confrontos diretos (H2H).
+    """
     if df.empty:
         return {}, {}
 
@@ -63,32 +70,19 @@ def calcular_estatisticas_historicas(df):
         return {}, {}
     df['Resultado'] = df.apply(lambda r: 'V' if r['FTHG'] > r['FTAG'] else ('E' if r['FTHG'] == r['FTAG'] else 'D'), axis=1)
 
-    stats_casa = df.groupby('HomeTeam').agg(
-        avg_gols_marcados_casa=('FTHG', 'mean'),
-        avg_gols_sofridos_casa=('FTAG', 'mean'),
-        total_jogos_casa=('HomeTeam', 'count')
-    )
-
-    stats_fora = df.groupby('AwayTeam').agg(
-        avg_gols_marcados_fora=('FTAG', 'mean'),
-        avg_gols_sofridos_fora=('FTHG', 'mean'),
-        total_jogos_fora=('AwayTeam', 'count')
-    )
-
+    stats_casa = df.groupby('HomeTeam').agg(avg_gols_marcados_casa=('FTHG', 'mean'), avg_gols_sofridos_casa=('FTAG', 'mean'), total_jogos_casa=('HomeTeam', 'count'))
+    stats_fora = df.groupby('AwayTeam').agg(avg_gols_marcados_fora=('FTAG', 'mean'), avg_gols_sofridos_fora=('FTHG', 'mean'), total_jogos_fora=('AwayTeam', 'count'))
     vitorias_casa = df[df['Resultado'] == 'V'].groupby('HomeTeam').size().rename('vitorias_casa')
     derrotas_casa = df[df['Resultado'] == 'D'].groupby('HomeTeam').size().rename('derrotas_casa')
     vitorias_fora = df[df['Resultado'] == 'D'].groupby('AwayTeam').size().rename('vitorias_fora')
     derrotas_fora = df[df['Resultado'] == 'V'].groupby('AwayTeam').size().rename('derrotas_fora')
+    stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora, derrotas_casa], axis=1).fillna(0)
 
-    stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora, derrotas_casa], axis=1).fillna(0).to_dict('index')
-
-    for time_nome, stats in stats_individuais.items():
-        total_jogos = stats.get('total_jogos_casa', 0) + stats.get('total_jogos_fora', 0)
-        total_vitorias = stats.get('vitorias_casa', 0) + stats.get('vitorias_fora', 0)
-        if total_jogos > 0:
-            stats['perc_vitorias_geral'] = (total_vitorias / total_jogos) * 100
-        if stats.get('total_jogos_fora', 0) > 0:
-            stats['perc_derrotas_fora'] = (stats.get('derrotas_fora', 0) / stats['total_jogos_fora']) * 100
+    # Adiciona cálculo de percentuais
+    stats_individuais['perc_vitorias_casa'] = (stats_individuais.get('vitorias_casa', 0) / stats_individuais['total_jogos_casa']) * 100
+    stats_individuais['perc_derrotas_fora'] = (stats_individuais.get('derrotas_fora', 0) / stats_individuais['total_jogos_fora']) * 100
+    
+    stats_individuais = stats_individuais.to_dict('index')
 
     df['TotalGols'] = df['FTHG'] + df['FTAG']
     df['H2H_Key'] = df.apply(lambda row: '|'.join(sorted([str(row['HomeTeam']), str(row['AwayTeam'])])), axis=1)
@@ -97,8 +91,13 @@ def calcular_estatisticas_historicas(df):
     print(f"  -> Estatísticas para {len(stats_individuais)} times e {len(stats_h2h)} confrontos calculadas.")
     return stats_individuais, stats_h2h
 
-# --- FUNÇÃO PRINCIPAL ---
+# --- FUNÇÃO PRINCIPAL DE ANÁLISE ---
+
 def rodar_analise_completa():
+    """
+    Orquestra todo o fluxo de análise do robô, desde a busca de jogos
+    até o envio de alertas. Esta versão inclui o modo de depuração.
+    """
     print(f"\n--- 🦅 Iniciando ciclo de análise... ---")
     
     jogos_principais = buscar_jogos_api_football(API_KEY_FOOTBALL)
@@ -147,12 +146,18 @@ def rodar_analise_completa():
                 print(f"  -> Odds encontradas com {maior_pontuacao}% de confiança.")
                 jogo['bookmakers'] = melhor_match_odds.get('bookmakers', [])
 
-        for func in lista_de_funcoes:
-            oportunidade = func(jogo, contexto)
-            if not oportunidade:
-                continue
+        oportunidade_encontrada_para_o_jogo = False
+        for func_estrategia in lista_de_funcoes:
+            # >>> MUDANÇA PRINCIPAL: MODO DE DEPURAÇÃO <<<
+            # Passamos debug=True para a função da estratégia.
+            # Esperamos que ela retorne um dicionário (sucesso) ou uma string (motivo da falha).
+            resultado = func_estrategia(jogo, contexto, debug=True)
 
-            if oportunidade.get('type') == 'aposta':
+            # Se o resultado for um dicionário, é uma oportunidade válida!
+            if isinstance(resultado, dict) and resultado.get('type') == 'aposta':
+                oportunidade_encontrada_para_o_jogo = True
+                oportunidade = resultado # Renomeia para manter a lógica antiga
+
                 if oportunidade.get('odd'):
                     if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
                         print(f"  -> ✅ OPORTUNIDADE COM ODD APROVADA! Estratégia: {oportunidade['nome_estrategia']}")
@@ -175,12 +180,19 @@ def rodar_analise_completa():
                     mensagem += "_NOTA: Verifique a odd na sua casa de apostas e decida se a entrada tem valor._"
                     enviar_alerta_telegram(mensagem)
                 
-                break
+                break # Se encontrou uma oportunidade, para de analisar outras estratégias para este jogo.
+            
+            # Se for uma string, é o motivo da falha. Vamos registrá-lo!
+            elif isinstance(resultado, str):
+                print(f"    - Estratégia '{func_estrategia.__name__}': {resultado}")
+        
+        if not oportunidade_encontrada_para_o_jogo:
+            print("  -> Nenhuma estratégia encontrou oportunidade para este jogo.")
     
     print("\n--- Ciclo de análise finalizado. ---")
 
 # --- PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    print("--- Iniciando execução única do bot ---")
+    # Este bloco é executado quando você roda `python main.py` diretamente.
+    # Ideal para fazer um teste manual antes de enviar para o GitHub.
     rodar_analise_completa()
-    print("\n--- Ciclo único de análise concluído com sucesso. ---")
