@@ -6,8 +6,6 @@ import pandas as pd
 from thefuzz import fuzz
 
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
-# Garanta que seu arquivo config.py está usando a biblioteca 'decouple'
-# para ler as variáveis de ambiente que o GitHub Actions fornecerá.
 from config import *
 from estrategias import *
 from api_externas import buscar_jogos_api_football, buscar_odds_the_odds_api
@@ -20,14 +18,10 @@ ARQUIVO_MAPA_LIGAS = 'mapa_ligas.json'
 # --- FUNÇÕES DE COMUNICAÇÃO ---
 
 def enviar_alerta_telegram(mensagem):
-    """
-    Envia uma mensagem de aposta formatada para o canal/grupo no Telegram.
-    """
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("  -> AVISO: Tokens do Telegram não encontrados. Mensagem não enviada.")
         return
         
-    # Escapa caracteres especiais para o modo MarkdownV2 do Telegram
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in caracteres_especiais:
         mensagem = mensagem.replace(char, f'\\{char}')
@@ -46,10 +40,6 @@ def enviar_alerta_telegram(mensagem):
 # --- FUNÇÕES DE PROCESSAMENTO DE DADOS ---
 
 def calcular_estatisticas_historicas(df):
-    """
-    Processa o DataFrame de dados históricos para calcular estatísticas de desempenho
-    dos times e confrontos diretos (H2H).
-    """
     if df.empty:
         return {}, {}
 
@@ -77,8 +67,7 @@ def calcular_estatisticas_historicas(df):
     vitorias_fora = df[df['Resultado'] == 'D'].groupby('AwayTeam').size().rename('vitorias_fora')
     derrotas_fora = df[df['Resultado'] == 'V'].groupby('AwayTeam').size().rename('derrotas_fora')
     stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora, derrotas_casa], axis=1).fillna(0)
-
-    # Adiciona cálculo de percentuais
+    
     stats_individuais['perc_vitorias_casa'] = (stats_individuais.get('vitorias_casa', 0) / stats_individuais['total_jogos_casa']) * 100
     stats_individuais['perc_derrotas_fora'] = (stats_individuais.get('derrotas_fora', 0) / stats_individuais['total_jogos_fora']) * 100
     
@@ -94,10 +83,6 @@ def calcular_estatisticas_historicas(df):
 # --- FUNÇÃO PRINCIPAL DE ANÁLISE ---
 
 def rodar_analise_completa():
-    """
-    Orquestra todo o fluxo de análise do robô, desde a busca de jogos
-    até o envio de alertas. Esta versão inclui o modo de depuração.
-    """
     print(f"\n--- 🦅 Iniciando ciclo de análise... ---")
     
     jogos_principais = buscar_jogos_api_football(API_KEY_FOOTBALL)
@@ -121,6 +106,10 @@ def rodar_analise_completa():
     
     print(f"\n--- 🔬 Analisando os {len(jogos_principais)} jogos encontrados... ---")
 
+    # >>> MUDANÇA 1: ADICIONADO PRINT DE AMOSTRA DOS NOMES DO CSV <<<
+    if contexto["stats_individuais"]:
+        print(f"  -> Amostra de nomes no arquivo CSV: {list(contexto['stats_individuais'].keys())[:10]}")
+
     lista_de_funcoes = [
         analisar_reacao_gigante,
         analisar_classico_de_gols,
@@ -132,15 +121,16 @@ def rodar_analise_completa():
         time_fora = jogo['away_team']
         print(f"\n--------------------------------------------------\nAnalisando Jogo: {time_casa} vs {time_fora}")
 
+        # >>> MUDANÇA 2: ADICIONADO PRINT DOS NOMES DA API <<<
+        print(f"  -> Nomes da API: Casa='{time_casa}', Fora='{time_fora}'")
+
         jogo['bookmakers'] = []
         if jogos_com_odds:
-            melhor_match_odds = None
-            maior_pontuacao = 75
+            melhor_match_odds = None; maior_pontuacao = 75
             for jogo_odd in jogos_com_odds:
                 pontuacao = fuzz.token_set_ratio(f"{time_casa} {time_fora}", f"{jogo_odd['home_team']} {jogo_odd['away_team']}")
                 if pontuacao > maior_pontuacao:
-                    maior_pontuacao = pontuacao
-                    melhor_match_odds = jogo_odd
+                    maior_pontuacao = pontuacao; melhor_match_odds = jogo_odd
             
             if melhor_match_odds:
                 print(f"  -> Odds encontradas com {maior_pontuacao}% de confiança.")
@@ -148,41 +138,25 @@ def rodar_analise_completa():
 
         oportunidade_encontrada_para_o_jogo = False
         for func_estrategia in lista_de_funcoes:
-            # >>> MUDANÇA PRINCIPAL: MODO DE DEPURAÇÃO <<<
-            # Passamos debug=True para a função da estratégia.
-            # Esperamos que ela retorne um dicionário (sucesso) ou uma string (motivo da falha).
             resultado = func_estrategia(jogo, contexto, debug=True)
 
-            # Se o resultado for um dicionário, é uma oportunidade válida!
             if isinstance(resultado, dict) and resultado.get('type') == 'aposta':
-                oportunidade_encontrada_para_o_jogo = True
-                oportunidade = resultado # Renomeia para manter a lógica antiga
+                oportunidade_encontrada_para_o_jogo = True; oportunidade = resultado
 
                 if oportunidade.get('odd'):
                     if oportunidade.get('odd', 0) >= ODD_MINIMA_GLOBAL:
                         print(f"  -> ✅ OPORTUNIDADE COM ODD APROVADA! Estratégia: {oportunidade['nome_estrategia']}")
-                        mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA {oportunidade.get('emoji', '⚠️')}*\n\n"
-                        mensagem += f"*Estratégia:* {oportunidade.get('nome_estrategia', 'N/A')}\n"
-                        mensagem += f"*⚽ JOGO:* {time_casa} vs {time_fora}\n"
-                        mensagem += f"*📈 MERCADO:* {oportunidade.get('mercado', 'N/A')}\n"
-                        mensagem += f"*📊 ODD ENCONTRADA:* *{oportunidade.get('odd')}*\n\n"
-                        mensagem += f"*🔍 Análise do Falcão:* _{oportunidade.get('motivo', 'N/A')}_"
+                        mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA {oportunidade.get('emoji', '⚠️')}*\n\n*Estratégia:* {oportunidade.get('nome_estrategia', 'N/A')}\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*📈 MERCADO:* {oportunidade.get('mercado', 'N/A')}\n*📊 ODD ENCONTRADA:* *{oportunidade.get('odd')}*\n\n*🔍 Análise do Falcão:* _{oportunidade.get('motivo', 'N/A')}_"
                         enviar_alerta_telegram(mensagem)
                     else:
                         print(f"  -> ❌ OPORTUNIDADE REPROVADA PELA ODD MÍNIMA ({oportunidade.get('odd', 0)} < {ODD_MINIMA_GLOBAL})")
                 else:
                     print(f"  -> ✅ OPORTUNIDADE SEM ODD ENCONTRADA! Estratégia: {oportunidade['nome_estrategia']}")
-                    mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA (SEM ODD) {oportunidade.get('emoji', '⚠️')}*\n\n"
-                    mensagem += f"*Estratégia:* {oportunidade.get('nome_estrategia', 'N/A')}\n"
-                    mensagem += f"*⚽ JOGO:* {time_casa} vs {time_fora}\n"
-                    mensagem += f"*📈 MERCADO SUGERIDO:* {oportunidade.get('mercado', 'N/A')}\n\n"
-                    mensagem += f"*🔍 Análise do Falcão:* _{oportunidade.get('motivo', 'N/A')}_\n\n"
-                    mensagem += "_NOTA: Verifique a odd na sua casa de apostas e decida se a entrada tem valor._"
+                    mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA (SEM ODD) {oportunidade.get('emoji', '⚠️')}*\n\n*Estratégia:* {oportunidade.get('nome_estrategia', 'N/A')}\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*📈 MERCADO SUGERIDO:* {oportunidade.get('mercado', 'N/A')}\n\n*🔍 Análise do Falcão:* _{oportunidade.get('motivo', 'N/A')}_\n\n_NOTA: Verifique a odd na sua casa de apostas e decida se a entrada tem valor._"
                     enviar_alerta_telegram(mensagem)
                 
-                break # Se encontrou uma oportunidade, para de analisar outras estratégias para este jogo.
+                break
             
-            # Se for uma string, é o motivo da falha. Vamos registrá-lo!
             elif isinstance(resultado, str):
                 print(f"    - Estratégia '{func_estrategia.__name__}': {resultado}")
         
@@ -193,6 +167,4 @@ def rodar_analise_completa():
 
 # --- PONTO DE ENTRADA ---
 if __name__ == "__main__":
-    # Este bloco é executado quando você roda `python main.py` diretamente.
-    # Ideal para fazer um teste manual antes de enviar para o GitHub.
     rodar_analise_completa()
