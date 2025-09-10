@@ -2,6 +2,7 @@ import os
 import requests
 import json
 from datetime import datetime, timezone, timedelta
+import pandas as pd
 from decouple import Config, RepositoryEnv
 
 print("--- Iniciando ROBÔ FALCÃO (Versão Única e Completa) ---")
