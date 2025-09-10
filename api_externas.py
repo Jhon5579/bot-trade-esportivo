@@ -1,61 +1,88 @@
+# api_externas.py
+
 import requests
-from datetime import datetime
+from datetime import date
 
 def buscar_jogos_api_football(api_key):
     """
-    Busca todos os jogos do dia usando a API-Football.
+    Busca na API-Football os jogos do dia para um conjunto de ligas pré-definidas
+    que correspondem ao arquivo de dados históricos.
     """
-    hoje_str = datetime.now().strftime('%Y-%m-%d')
-    print(f"--- 📡 Buscando jogos do dia {hoje_str} na API-Football... ---")
+    # --- LISTA COMPLETA DE LIGAS PARA ANALISAR ---
+    # Esta lista foi criada com base nas ligas encontradas no seu arquivo CSV.
+    LIGAS_ALVO = {
+        # --- Ligas Principais (América do Sul e do Norte) ---
+        '71': 'Brasileirão Série A',
+        '128': 'Argentina - Liga Profesional', # Torneo De La Liga Profesional
+        '253': 'USA - MLS',
+        '262': 'Mexico - Liga MX',
+
+        # --- Ligas Principais (Europa - Códigos Famosos) ---
+        '39': 'England - Premier League (E0)',
+        '40': 'England - Championship (E1)',
+        '41': 'England - League One (E2)',
+        '42': 'England - League Two (E3)',
+        '61': 'France - Ligue 1 (F1)',
+        '62': 'France - Ligue 2 (F2)',
+        '78': 'Germany - Bundesliga (G1)',
+        '135': 'Italy - Serie A (I1)',
+        '136': 'Italy - Serie B (I2)',
+        '140': 'Spain - La Liga (SP1)',
+        '141': 'Spain - Segunda Division (SP2)',
+        '144': 'Belgium - Jupiler Pro League (B1)',
+        '88': 'Netherlands - Eredivisie (N1)',
+        '94': 'Portugal - Primeira Liga (P1)',
+        '179': 'Scotland - Premiership (SC0)',
+        '180': 'Scotland - Championship (SC1)',
+        '203': 'Turkey - Super Lig (T1)',
+
+        # --- Outras Ligas Internacionais ---
+        '119': 'Sweden - Allsvenskan',
+        '116': 'Denmark - Superliga',
+        '197': 'Greece - Super League',
+        '206': 'Switzerland - Challenge League',
+        '98': 'Japan - J1 League (D1)',
+        '99': 'Japan - J2 League (D2)'
+    }
     
-    url = "https://v3.football.api-sports.io/fixtures"
-    params = {"date": hoje_str}
-    headers = {"x-apisports-key": api_key}
+    SEASON = date.today().year
+    DATA_HOJE = date.today().strftime('%Y-%m-%d')
     
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=20)
-        response.raise_for_status()
-        dados = response.json()
+    headers = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': api_key}
+    todos_os_jogos = []
+
+    print(f"--- ⚽ Buscando jogos do dia {DATA_HOJE} na API-Football para as ligas selecionadas... ---")
+
+    # Loop para buscar jogos em cada uma das nossas ligas alvo
+    for league_id, league_name in LIGAS_ALVO.items():
+        print(f"  -> Buscando na liga: {league_name} (ID: {league_id})")
+        url = f"https://v3.football.api-sports.io/fixtures?league={league_id}&season={SEASON}&date={DATA_HOJE}"
         
-        jogos_do_dia = []
-        for jogo_data in dados.get('response', []):
-            fixture = jogo_data.get('fixture', {})
-            teams = jogo_data.get('teams', {})
-            league = jogo_data.get('league', {})
-            
-            if fixture.get('status', {}).get('short') != 'NS':
-                continue
+        try:
+            response = requests.get(url, headers=headers, timeout=20)
+            if response.status_code == 200:
+                data = response.json().get('response', [])
+                if data:
+                    print(f"    -> {len(data)} jogo(s) encontrado(s).")
+                    for fixture in data:
+                        jogo = {
+                            'id_partida': fixture['fixture']['id'],
+                            'home_team': fixture['teams']['home']['name'],
+                            'away_team': fixture['teams']['away']['name'],
+                            'league': fixture['league']['name'],
+                            'timestamp': fixture['fixture']['timestamp']
+                        }
+                        todos_os_jogos.append(jogo)
+                else:
+                    print("    -> Nenhum jogo agendado para hoje nesta liga.")
+            else:
+                print(f"    -> ERRO ao buscar na API-Football: Status {response.status_code} - {response.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"    -> ERRO de conexão com a API-Football: {e}")
 
-            jogo = {
-                "id_api_football": fixture.get('id'),
-                "liga": league.get('name', 'N/A'),
-                "pais": league.get('country', 'N/A'),
-                # --- CORREÇÃO APLICADA AQUI ---
-                "home_team": teams.get('home', {}).get('name', 'N/A'),
-                "away_team": teams.get('away', {}).get('name', 'N/A'),
-                # --------------------------------
-                "horario_inicio_utc": fixture.get('date')
-            }
-            jogos_do_dia.append(jogo)
-            
-        print(f"  -> ✅ Sucesso! Encontrados {len(jogos_do_dia)} jogos agendados.")
-        return jogos_do_dia
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ❌ ERRO ao buscar jogos na API-Football: {e}")
-        return []
-
-def buscar_odds_the_odds_api(api_key, casa_alvo='pinnacle'):
-    """
-    Busca a lista limitada de jogos com odds da The Odds API.
-    """
-    print("\n--- 💰 Buscando as poucas odds disponíveis na The Odds API... ---")
-    url_odds = f"https://api.the-odds-api.com/v4/sports/soccer/odds?apiKey={api_key}&regions=eu,us,uk,au&bookmakers={casa_alvo}&oddsFormat=decimal&markets=h2h"
-    try:
-        response_odds = requests.get(url_odds, timeout=30)
-        response_odds.raise_for_status()
-        jogos_com_odds = response_odds.json()
-        print(f"  -> Encontradas odds para {len(jogos_com_odds)} jogos.")
-        return jogos_com_odds
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ⚠️ AVISO: Não foi possível buscar odds da The Odds API: {e}")
-        return []
+    if todos_os_jogos:
+        print(f"\n--- ✅ Sucesso! Encontrados {len(todos_os_jogos)} jogos no total para as ligas selecionadas. ---")
+    else:
+        print("\n--- ⚠️ Nenhum jogo encontrado para hoje nas ligas selecionadas. ---")
+        
+    return todos_os_jogos
