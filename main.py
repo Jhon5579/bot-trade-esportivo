@@ -2,9 +2,6 @@ import os
 import requests
 import json
 from datetime import datetime, timezone, timedelta
-import time
-from thefuzz import fuzz
-import pandas as pd
 from decouple import Config, RepositoryEnv
 
 print("--- Iniciando ROBÔ FALCÃO (Versão Única e Completa) ---")
@@ -21,6 +18,8 @@ try:
 except Exception as e:
     print(f"❌ ERRO FATAL ao ler o arquivo .env: {e}")
     exit()
+
+# O resto do seu código main.py continua aqui...
 
 CASA_ALVO = 'pinnacle'
 ODD_MINIMA_GLOBAL = 1.50
