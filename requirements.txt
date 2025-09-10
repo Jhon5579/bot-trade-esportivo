@@ -1,4 +1,4 @@
-decouple
 requests
 pandas
-thefuzz[speed]
+thefuzz
+python-decouple>=3.6
