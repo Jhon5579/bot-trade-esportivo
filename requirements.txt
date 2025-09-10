@@ -1,3 +1,4 @@
+decouple
 requests
 pandas
 thefuzz[speed]
