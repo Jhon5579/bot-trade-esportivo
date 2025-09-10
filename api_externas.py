@@ -7,13 +7,14 @@ def buscar_jogos_api_football(api_key):
     """
     Busca na API-Football os jogos do dia para um conjunto de ligas pré-definidas
     que correspondem ao arquivo de dados históricos.
+    VERSÃO CORRIGIDA: Remove o parâmetro 'season' para maior compatibilidade.
     """
     # --- LISTA COMPLETA DE LIGAS PARA ANALISAR ---
     # Esta lista foi criada com base nas ligas encontradas no seu arquivo CSV.
     LIGAS_ALVO = {
         # --- Ligas Principais (América do Sul e do Norte) ---
         '71': 'Brasileirão Série A',
-        '128': 'Argentina - Liga Profesional', # Torneo De La Liga Profesional
+        '128': 'Argentina - Liga Profesional',
         '253': 'USA - MLS',
         '262': 'Mexico - Liga MX',
 
@@ -45,7 +46,6 @@ def buscar_jogos_api_football(api_key):
         '99': 'Japan - J2 League (D2)'
     }
     
-    SEASON = date.today().year
     DATA_HOJE = date.today().strftime('%Y-%m-%d')
     
     headers = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': api_key}
@@ -53,10 +53,10 @@ def buscar_jogos_api_football(api_key):
 
     print(f"--- ⚽ Buscando jogos do dia {DATA_HOJE} na API-Football para as ligas selecionadas... ---")
 
-    # Loop para buscar jogos em cada uma das nossas ligas alvo
     for league_id, league_name in LIGAS_ALVO.items():
         print(f"  -> Buscando na liga: {league_name} (ID: {league_id})")
-        url = f"https://v3.football.api-sports.io/fixtures?league={league_id}&season={SEASON}&date={DATA_HOJE}"
+        
+        url = f"https://v3.football.api-sports.io/fixtures?league={league_id}&date={DATA_HOJE}"
         
         try:
             response = requests.get(url, headers=headers, timeout=20)
@@ -86,3 +86,50 @@ def buscar_jogos_api_football(api_key):
         print("\n--- ⚠️ Nenhum jogo encontrado para hoje nas ligas selecionadas. ---")
         
     return todos_os_jogos
+
+
+def buscar_odds_the_odds_api(api_key):
+    """
+    Busca odds na The Odds API para futebol.
+    VERSÃO MELHORADA: Inclui tratamento de erros detalhado.
+    """
+    print("\n--- 👍 Buscando as poucas odds disponíveis na The Odds API... ---")
+    
+    params = {
+        'api_key': api_key,
+        'regions': 'br,eu',
+        'markets': 'h2h',
+        'bookmakers': 'pinnacle',
+        'oddsFormat': 'decimal'
+    }
+    
+    url = f"https://api.the-odds-api.com/v4/sports/soccer_brazil_campeonato/odds/"
+    
+    jogos_com_odds = []
+    
+    try:
+        response = requests.get(url, params=params, timeout=20)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                print(f"  -> ✅ Sucesso! Encontradas odds para {len(data)} jogos.")
+                for jogo in data:
+                    jogos_com_odds.append({
+                        'id': jogo.get('id'),
+                        'home_team': jogo.get('home_team'),
+                        'away_team': jogo.get('away_team'),
+                        'bookmakers': jogo.get('bookmakers', [])
+                    })
+            else:
+                print("  -> Nenhuma odd encontrada na The Odds API para os parâmetros atuais.")
+        else:
+            print(f"\n--- 🚨 ERRO AO CHAMAR A THE ODDS API 🚨 ---")
+            print(f"  -> Status da Resposta: {response.status_code}")
+            print(f"  -> Mensagem de Erro: {response.text}")
+            print("  -> Verifique se sua API Key está correta e se você não excedeu a cota mensal.")
+
+    except requests.exceptions.RequestException as e:
+        print(f"  -> ERRO de conexão com a The Odds API: {e}")
+        
+    return jogos_com_odds
