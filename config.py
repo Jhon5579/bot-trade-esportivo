@@ -12,6 +12,8 @@ env_config = Config(RepositoryEnv(DOTENV_PATH))
 TELEGRAM_TOKEN = env_config('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = env_config('TELEGRAM_CHAT_ID')
 API_KEY_ODDS = env_config('API_KEY_ODDS')
+# Adicione esta linha junto com as outras chaves
+API_KEY_FOOTBALL = env_config('API_KEY_FOOTBALL')
 
 # --- DICIONÁRIO DE RISCO E NÍVEIS DE ODDS ---
 NIVEIS_DE_RISCO_ODDS = {
