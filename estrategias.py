@@ -2,7 +2,6 @@
 # Descrição: Versão final com todas as estratégias 100% completas e adaptadas para a arquitetura SofaScore-centric.
 
 from datetime import datetime, timezone, timedelta
-from sofascore_utils import consultar_forma_sofascore, consultar_classificacao_sofascore, consultar_estatisticas_escanteios
 from config import *
 
 # --- FUNÇÃO DE SUPORTE ---
