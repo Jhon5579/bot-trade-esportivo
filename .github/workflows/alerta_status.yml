@@ -18,8 +18,8 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Usamos a ferramenta 'curl' para fazer uma chamada de API direta. É super leve!
+          # VERSÃO CORRIGIDA: Adicionado '\' antes de '!' e '.' para o MarkdownV2 do Telegram.
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage \
             -d chat_id=$TELEGRAM_CHAT_ID \
-            -d text="✅ Estou monitorando o mercado! O Falcão está de olho nas melhores oportunidades. 🦅" \
+            -d text="✅ Estou monitorando o mercado\! O Falcão está de olho nas melhores oportunidades\. 🦅" \
             -d parse_mode="MarkdownV2"
