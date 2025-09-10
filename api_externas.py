@@ -1,13 +1,9 @@
-# Arquivo: api_externas.py
-# Descrição: Centraliza todas as chamadas a APIs externas.
-
 import requests
 from datetime import datetime
 
 def buscar_jogos_api_football(api_key):
     """
     Busca todos os jogos do dia usando a API-Football.
-    Isso conta como apenas 1 requisição.
     """
     hoje_str = datetime.now().strftime('%Y-%m-%d')
     print(f"--- 📡 Buscando jogos do dia {hoje_str} na API-Football... ---")
@@ -27,7 +23,6 @@ def buscar_jogos_api_football(api_key):
             teams = jogo_data.get('teams', {})
             league = jogo_data.get('league', {})
             
-            # Pula jogos que não estão agendados (ex: adiados, cancelados)
             if fixture.get('status', {}).get('short') != 'NS':
                 continue
 
@@ -35,8 +30,10 @@ def buscar_jogos_api_football(api_key):
                 "id_api_football": fixture.get('id'),
                 "liga": league.get('name', 'N/A'),
                 "pais": league.get('country', 'N/A'),
-                "time_casa": teams.get('home', {}).get('name', 'N/A'),
-                "time_fora": teams.get('away', {}).get('name', 'N/A'),
+                # --- CORREÇÃO APLICADA AQUI ---
+                "home_team": teams.get('home', {}).get('name', 'N/A'),
+                "away_team": teams.get('away', {}).get('name', 'N/A'),
+                # --------------------------------
                 "horario_inicio_utc": fixture.get('date')
             }
             jogos_do_dia.append(jogo)
