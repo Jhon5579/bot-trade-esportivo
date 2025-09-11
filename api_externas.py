@@ -1,71 +1,97 @@
 # api_externas.py
 
 import requests
-from datetime import date
+import json
+from datetime import datetime, timedelta
 
-def buscar_jogos_api_football(api_key):
-    """
-    Busca na API-Football TODOS os jogos do dia com uma única chamada de API.
-    Esta é a versão mais eficiente para o plano gratuito.
-    """
-    DATA_HOJE = date.today().strftime('%Y-%m-%d')
-    headers = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': api_key}
-    todos_os_jogos = []
+# --- LÓGICA DE CACHE PARA A SOFASCORE ---
+ARQUIVO_CACHE_SOFASCORE = 'cache_sofascore.json'
+CACHE_TTL_HORAS = 2 # Cache configurado para 2 horas, como você pediu.
 
-    print(f"--- ⚽ Buscando TODOS os jogos do dia {DATA_HOJE} na API-Football (1 chamada)... ---")
-
-    # URL que pede os jogos do dia, sem filtro de liga
-    url = f"https://v3.football.api-sports.io/fixtures?date={DATA_HOJE}"
-    
+def carregar_cache():
+    """Tenta carregar os dados do arquivo de cache."""
     try:
-        response = requests.get(url, headers=headers, timeout=30)
-        
+        with open(ARQUIVO_CACHE_SOFASCORE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+def salvar_cache(dados):
+    """Salva os novos dados e o timestamp atual no arquivo de cache."""
+    cache_data = {
+        'timestamp': datetime.now().isoformat(),
+        'dados': dados
+    }
+    with open(ARQUIVO_CACHE_SOFASCORE, 'w') as f:
+        json.dump(cache_data, f, indent=4)
+# -----------------------------------------
+
+def buscar_jogos_sofascore():
+    """
+    Busca os jogos do dia, utilizando um sistema de cache para evitar
+    chamadas excessivas à API da SofaScore.
+    """
+    print(f"--- ⚽ Buscando jogos do dia {datetime.now().strftime('%Y-%m-%d')}... ---")
+
+    cache = carregar_cache()
+
+    if cache:
+        timestamp_cache = datetime.fromisoformat(cache['timestamp'])
+        if datetime.now() < timestamp_cache + timedelta(hours=CACHE_TTL_HORAS):
+            print(f"--- ✅ Usando dados do cache (válido por {CACHE_TTL_HORAS}h). Nenhuma chamada à API foi feita. ---")
+            return cache['dados']
+
+    print("--- 🌐 Cache expirado ou inexistente. Fazendo nova chamada à API da SofaScore... ---")
+
+    data_hoje = datetime.now().strftime('%Y-%m-%d')
+    url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{data_hoje}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    todos_os_jogos = []
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
-            data = response.json().get('response', [])
-            if data:
-                print(f"--- ✅ Sucesso! Encontrados {len(data)} jogos no total. ---")
-                for fixture in data:
+            data = response.json()
+            eventos = data.get('events', [])
+            if eventos:
+                print(f"--- ✅ Sucesso! Encontrados {len(eventos)} jogos. Salvando no cache... ---")
+                for evento in eventos:
                     jogo = {
-                        'id_partida': fixture['fixture']['id'],
-                        'home_team': fixture['teams']['home']['name'],
-                        'away_team': fixture['teams']['away']['name'],
-                        'league': fixture['league']['name'],
-                        'timestamp': fixture['fixture']['timestamp']
+                        'home_team': evento.get('homeTeam', {}).get('name', 'N/A'),
+                        'away_team': evento.get('awayTeam', {}).get('name', 'N/A'),
+                        'league': evento.get('tournament', {}).get('name', 'N/A'),
+                        'id_partida': evento.get('id', 0),
+                        'timestamp': evento.get('startTimestamp', 0)
                     }
                     todos_os_jogos.append(jogo)
+                salvar_cache(todos_os_jogos)
             else:
-                print("--- ⚠️ Nenhum jogo foi encontrado para a data de hoje com a sua chave de API. ---")
+                print("--- ⚠️ Nenhum jogo encontrado para hoje na SofaScore. ---")
         else:
-            print(f"--- ❌ Erro ao buscar os jogos: {response.status_code} - {response.text} ---")
-
+            print(f"--- ❌ FALHA! A API da SofaScore retornou um erro: Status {response.status_code} ---")
     except requests.exceptions.RequestException as e:
-        print(f"--- ❌ Erro de conexão: {e} ---")
-        
+        print(f"--- ❌ ERRO DE CONEXÃO com a SofaScore: {e} ---")
+
     return todos_os_jogos
 
 
 def buscar_odds_the_odds_api(api_key):
     """
-    Busca odds na The Odds API para futebol.
-    VERSÃO MELHORADA: Inclui tratamento de erros detalhado.
+    Busca odds na The Odds API, procurando em múltiplas casas de apostas.
     """
-    print("\n--- 👍 Buscando as poucas odds disponíveis na The Odds API... ---")
-    
+    print("\n--- 👍 Buscando odds disponíveis na The Odds API... ---")
+
+    CASAS_DE_APOSTAS = 'pinnacle,betfair,bet365,marathonbet'
     params = {
-        'api_key': api_key,
-        'regions': 'br,eu',
-        'markets': 'h2h',
-        'bookmakers': 'pinnacle',
+        'api_key': api_key, 'regions': 'br,eu',
+        'markets': 'h2h', 'bookmakers': CASAS_DE_APOSTAS,
         'oddsFormat': 'decimal'
     }
-    
-    url = "https://api.the-odds-api.com/v4/sports/soccer/odds" # URL genérica para futebol
-    
+    url = "https://api.the-odds-api.com/v4/sports/soccer/odds"
     jogos_com_odds = []
-    
+
     try:
         response = requests.get(url, params=params, timeout=20)
-        
         if response.status_code == 200:
             data = response.json()
             if data:
@@ -83,8 +109,34 @@ def buscar_odds_the_odds_api(api_key):
             print(f"\n--- 🚨 ERRO AO CHAMAR A THE ODDS API 🚨 ---")
             print(f"  -> Status da Resposta: {response.status_code}")
             print(f"  -> Mensagem de Erro: {response.text}")
-
     except requests.exceptions.RequestException as e:
         print(f"  -> ERRO de conexão com a The Odds API: {e}")
-        
+
     return jogos_com_odds
+
+
+def verificar_resultado_sofascore(id_partida):
+    """
+    Verifica o status e o resultado final de uma partida específica pelo seu ID.
+    Esta função é a base para o sistema de apostas pendentes e histórico.
+    """
+    url = f"https://api.sofascore.com/api/v1/event/{id_partida}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            data = response.json().get('event', {})
+            status = data.get('status', {}).get('code', 0)
+
+            # Código 100 = 'Partida Encerrada' na SofaScore
+            if status == 100:
+                placar_casa = data.get('homeScore', {}).get('current', -1)
+                placar_fora = data.get('awayScore', {}).get('current', -1)
+                return "encerrado", placar_casa, placar_fora
+            else:
+                return "em_andamento", None, None # Jogo ainda não acabou ou status desconhecido
+    except requests.exceptions.RequestException:
+        return "erro", None, None
+
+    return "erro", None, None
