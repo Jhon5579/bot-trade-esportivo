@@ -15,7 +15,7 @@ from api_externas import buscar_jogos_sofascore, buscar_odds_the_odds_api, verif
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
 ARQUIVO_PENDENTES = 'apostas_pendentes.json'
 ARQUIVO_HISTORICO = 'historico_de_apostas.json'
-ARQUIVO_JOGOS_DIA = 'jogos_a_acompanhar.json' # Novo arquivo para o arquivista
+ARQUIVO_JOGOS_DIA = 'jogos_a_acompanhar.json'
 ODD_MINIMA = 1.40
 ODD_MAXIMA = 2.00
 
@@ -119,13 +119,18 @@ def calcular_estatisticas_historicas(df):
     stats_casa = df.groupby('HomeTeam').agg(avg_gols_marcados_casa=('FTHG', 'mean'), avg_gols_sofridos_casa=('FTAG', 'mean'), total_jogos_casa=('HomeTeam', 'count'))
     stats_fora = df.groupby('AwayTeam').agg(avg_gols_marcados_fora=('FTAG', 'mean'), avg_gols_sofridos_fora=('FTHG', 'mean'), total_jogos_fora=('AwayTeam', 'count'))
     vitorias_casa = df[df['ResultadoCasa'] == 'V'].groupby('HomeTeam').size().rename('vitorias_casa')
+    empates_casa = df[df['ResultadoCasa'] == 'E'].groupby('HomeTeam').size().rename('empates_casa')
     derrotas_casa = df[df['ResultadoCasa'] == 'D'].groupby('HomeTeam').size().rename('derrotas_casa')
     vitorias_fora = df[df['ResultadoFora'] == 'V'].groupby('AwayTeam').size().rename('vitorias_fora')
+    empates_fora = df[df['ResultadoFora'] == 'E'].groupby('AwayTeam').size().rename('empates_fora')
     derrotas_fora = df[df['ResultadoFora'] == 'D'].groupby('AwayTeam').size().rename('derrotas_fora')
-    stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, vitorias_fora, derrotas_fora, derrotas_casa], axis=1).fillna(0)
+    stats_individuais = pd.concat([stats_casa, stats_fora, vitorias_casa, empates_casa, derrotas_casa, vitorias_fora, empates_fora, derrotas_fora], axis=1).fillna(0)
     stats_individuais['perc_vitorias_casa'] = (stats_individuais['vitorias_casa'] / stats_individuais['total_jogos_casa']) * 100
+    stats_individuais['perc_derrotas_casa'] = (stats_individuais['derrotas_casa'] / stats_individuais['total_jogos_casa']) * 100
+    stats_individuais['perc_empates_casa'] = (stats_individuais['empates_casa'] / stats_individuais['total_jogos_casa']) * 100
+    stats_individuais['perc_vitorias_fora'] = (stats_individuais['vitorias_fora'] / stats_individuais['total_jogos_fora']) * 100
     stats_individuais['perc_derrotas_fora'] = (stats_individuais['derrotas_fora'] / stats_individuais['total_jogos_fora']) * 100
-    stats_individuais['perc_vitorias_geral'] = ((stats_individuais['vitorias_casa'] + stats_individuais['vitorias_fora']) / (stats_individuais['total_jogos_casa'] + stats_individuais['total_jogos_fora'])) * 100
+    stats_individuais['perc_empates_fora'] = (stats_individuais['empates_fora'] / stats_individuais['total_jogos_fora']) * 100
     stats_individuais = stats_individuais.to_dict('index')
     df['TotalGols'] = df['FTHG'] + df['FTAG']
     df['H2H_Key'] = df.apply(lambda row: '|'.join(sorted([str(row['HomeTeam']), str(row['AwayTeam'])])), axis=1)
@@ -138,16 +143,11 @@ def rodar_analise_completa():
     print(f"\n--- 🦅 Iniciando ciclo de análise de novas oportunidades... ---")
     apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, [])
     ids_pendentes = [aposta['id_partida'] for aposta in apostas_pendentes]
-    
     jogos_principais = buscar_jogos_sofascore()
-    
-    # --- LÓGICA PARA SALVAR OS JOGOS DO DIA PARA O ARQUIVISTA ---
     dados_dia = carregar_json(ARQUIVO_JOGOS_DIA, {"data": "", "jogos": []})
     if dados_dia.get("data") != str(date.today()) and jogos_principais:
         print(f"  -> 💾 Salvando a lista de {len(jogos_principais)} jogos de hoje para futura atualização do histórico.")
         salvar_json({"data": str(date.today()), "jogos": jogos_principais}, ARQUIVO_JOGOS_DIA)
-    # -----------------------------------------------------------
-
     if not jogos_principais:
         print("Nenhum jogo novo encontrado. Encerrando o ciclo."); return
     jogos_com_odds = buscar_odds_the_odds_api(API_KEY_ODDS)
@@ -159,11 +159,17 @@ def rodar_analise_completa():
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo histórico '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado."); return
     print(f"\n--- 🔬 Analisando {len(jogos_principais)} jogos encontrados... ---")
+
+    # --- LISTA ATUALIZADA COM SUAS ESTRATÉGIAS VALIDADAS ---
     lista_de_funcoes = [
-        analisar_mandante_forte_vs_visitante_fraco, analisar_visitante_forte_vs_mandante_fraco,
-        analisar_classico_de_gols, analisar_forma_recente_casa, analisar_forma_recente_fora,
-        analisar_ambas_marcam, analisar_empate
+        analisar_favorito_forte_fora,
+        analisar_valor_mandante_azarao,
+        analisar_valor_visitante_azarao,
+        analisar_empate_valorizado,
+        analisar_forma_recente_casa,
+        analisar_forma_recente_fora
     ]
+
     for jogo in jogos_principais:
         id_partida, time_casa, time_fora = jogo.get('id_partida'), jogo['home_team'], jogo['away_team']
         if id_partida in ids_pendentes: continue
