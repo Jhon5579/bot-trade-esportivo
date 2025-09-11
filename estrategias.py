@@ -5,9 +5,8 @@ from thefuzz import process
 
 def _get_nome_corrigido(nome_time_api, contexto):
     """
-    Função inteligente que busca o nome de time mais parecido no nosso banco de dados.
-    Usa um cache simples para não repetir a busca para o mesmo time na mesma execução.
-    Retorna o nome corrigido do time como encontrado no arquivo histórico.
+    Busca o nome de time mais parecido no banco de dados.
+    Usa um cache para não repetir a busca para o mesmo time na mesma execução.
     """
     if 'cache_nomes' not in contexto:
         contexto['cache_nomes'] = {}
@@ -21,13 +20,9 @@ def _get_nome_corrigido(nome_time_api, contexto):
 
     melhor_match = process.extractOne(nome_time_api, contexto['lista_nomes_historico'], score_cutoff=85)
 
-    if melhor_match:
-        nome_correspondente = melhor_match[0]
-        contexto['cache_nomes'][nome_time_api] = nome_correspondente
-        return nome_correspondente
-    else:
-        contexto['cache_nomes'][nome_time_api] = None
-        return None
+    nome_correspondente = melhor_match[0] if melhor_match else None
+    contexto['cache_nomes'][nome_time_api] = nome_correspondente
+    return nome_correspondente
 
 def _encontrar_odd_especifica(jogo, mercado):
     """Encontra a odd de um mercado específico (Home, Away, Draw)."""
@@ -41,9 +36,10 @@ def _encontrar_odd_especifica(jogo, mercado):
                     return outcome.get('price')
     return None
 
-# --- ESTRATÉGIAS DE ANÁLISE ---
+# --- ESTRATÉGIAS VALIDADAS (INTEGRADAS DO SEU CÓDIGO ANTIGO) ---
 
-def analisar_mandante_forte_vs_visitante_fraco(jogo, contexto, debug=False):
+def analisar_favorito_forte_fora(jogo, contexto, debug=False):
+    """Visitante com alto favoritismo estatístico."""
     time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
     nome_casa = _get_nome_corrigido(time_casa_api, contexto)
     nome_fora = _get_nome_corrigido(time_fora_api, contexto)
@@ -55,67 +51,98 @@ def analisar_mandante_forte_vs_visitante_fraco(jogo, contexto, debug=False):
     stats_casa = contexto['stats_individuais'][nome_casa]
     stats_fora = contexto['stats_individuais'][nome_fora]
 
-    perc_vitorias_casa = stats_casa.get('perc_vitorias_casa', 0)
-    perc_derrotas_fora = stats_fora.get('perc_derrotas_fora', 0)
+    if (stats_fora.get('perc_vitorias_fora', 0) > 70 and
+        stats_casa.get('perc_derrotas_casa', 0) > 70 and
+        stats_fora.get('avg_gols_marcados_fora', 0) > 1.8 and
+        stats_casa.get('avg_gols_sofridos_casa', 0) > 1.5):
 
-    if perc_vitorias_casa >= 60.0 and perc_derrotas_fora >= 60.0:
-        motivo = f"Casa vence {perc_vitorias_casa:.1f}% em casa / Visitante perde {perc_derrotas_fora:.1f}% fora."
-        odd = _encontrar_odd_especifica(jogo, 'Home')
-        return {'type': 'aposta', 'nome_estrategia': 'Mandante Forte vs Visitante Fraco', 'mercado': 'Casa para Vencer', 'motivo': motivo, 'odd': odd}
-    else:
-        if debug: return f"Reprovado. Vitórias Casa: {perc_vitorias_casa:.1f}%, Derrotas Fora: {perc_derrotas_fora:.1f}%"
-        return None
-
-def analisar_visitante_forte_vs_mandante_fraco(jogo, contexto, debug=False):
-    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
-    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
-    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
-
-    if not nome_casa or not nome_fora:
-        if debug: return "Time sem correspondência no histórico."
-        return None
-
-    stats_casa = contexto['stats_individuais'][nome_casa]
-    stats_fora = contexto['stats_individuais'][nome_fora]
-
-    perc_derrotas_casa = 100 - stats_casa.get('perc_vitorias_casa', 100)
-    perc_vitorias_fora = 100 - stats_fora.get('perc_derrotas_fora', 100)
-
-    if perc_vitorias_fora >= 60.0 and perc_derrotas_casa >= 60.0:
-        motivo = f"Visitante vence {perc_vitorias_fora:.1f}% fora / Mandante perde {perc_derrotas_casa:.1f}% em casa."
+        motivo = "Visitante com >70% de vitórias fora vs. Mandante com >70% de derrotas em casa."
         odd = _encontrar_odd_especifica(jogo, 'Away')
-        return {'type': 'aposta', 'nome_estrategia': 'Visitante Forte vs Mandante Fraco', 'mercado': 'Visitante para Vencer', 'motivo': motivo, 'odd': odd}
+        return {'type': 'aposta', 'nome_estrategia': 'Favorito Forte Fora', 'mercado': 'Visitante para Vencer', 'motivo': motivo, 'odd': odd, 'emoji': '🚀'}
     else:
-        if debug: return f"Reprovado. Vitórias Fora: {perc_vitorias_fora:.1f}%, Derrotas Casa: {perc_derrotas_casa:.1f}%"
+        if debug: return "Critérios de favoritismo extremo do visitante não atendidos."
         return None
 
-def analisar_classico_de_gols(jogo, contexto, debug=False):
+def analisar_valor_mandante_azarao(jogo, contexto, debug=False):
+    """Mandante com status de azarão nas odds, mas com bom histórico em casa."""
+    time_casa_api = jogo['home_team']
+    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
+
+    if not nome_casa:
+        if debug: return "Time da casa sem correspondência no histórico."
+        return None
+
+    stats_casa = contexto['stats_individuais'][nome_casa]
+    odd_casa = _encontrar_odd_especifica(jogo, 'Home')
+
+    if not odd_casa:
+        if debug: return "Odd do mandante não encontrada para análise de valor."
+        return None
+
+    if (odd_casa > 2.0 and
+        stats_casa.get('perc_vitorias_casa', 0) > 45 and
+        stats_casa.get('avg_gols_marcados_casa', 0) > 1.5):
+
+        motivo = f"Mandante com odd de {odd_casa} mas com {stats_casa.get('perc_vitorias_casa', 0):.1f}% de vitórias em casa."
+        return {'type': 'aposta', 'nome_estrategia': 'Valor no Mandante Azarão', 'mercado': 'Casa para Vencer', 'motivo': motivo, 'odd': odd_casa, 'emoji': '💎'}
+    else:
+        if debug: return "Critérios de valor para o mandante azarão não atendidos."
+        return None
+
+def analisar_valor_visitante_azarao(jogo, contexto, debug=False):
+    """Visitante com status de azarão nas odds, mas com bom histórico fora."""
+    time_fora_api = jogo['away_team']
+    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
+
+    if not nome_fora:
+        if debug: return "Time visitante sem correspondência no histórico."
+        return None
+
+    stats_fora = contexto['stats_individuais'][nome_fora]
+    odd_visitante = _encontrar_odd_especifica(jogo, 'Away')
+
+    if not odd_visitante:
+        if debug: return "Odd do visitante não encontrada para análise de valor."
+        return None
+
+    if (odd_visitante > 2.2 and
+        stats_fora.get('perc_vitorias_fora', 0) > 40 and
+        stats_fora.get('avg_gols_marcados_fora', 0) > 1.4):
+
+        motivo = f"Visitante com odd de {odd_visitante} mas com {stats_fora.get('perc_vitorias_fora', 0):.1f}% de vitórias fora."
+        return {'type': 'aposta', 'nome_estrategia': 'Valor no Visitante Azarão', 'mercado': 'Visitante para Vencer', 'motivo': motivo, 'odd': odd_visitante, 'emoji': '💎'}
+    else:
+        if debug: return "Critérios de valor para o visitante azarão não atendidos."
+        return None
+
+def analisar_empate_valorizado(jogo, contexto, debug=False):
+    """Busca jogos com alta probabilidade de empate com base no histórico."""
     time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
     nome_casa = _get_nome_corrigido(time_casa_api, contexto)
     nome_fora = _get_nome_corrigido(time_fora_api, contexto)
 
     if not nome_casa or not nome_fora:
-        if debug: return "Time sem correspondência no histórico para H2H."
+        if debug: return "Time sem correspondência no histórico."
         return None
 
-    h2h_key = '|'.join(sorted([nome_casa, nome_fora]))
-    confronto = contexto.get('stats_h2h', {}).get(h2h_key)
+    stats_casa = contexto['stats_individuais'][nome_casa]
+    stats_fora = contexto['stats_individuais'][nome_fora]
 
-    if not confronto:
-        if debug: return "Sem histórico H2H."
-        return None
+    if (stats_casa.get('perc_empates_casa', 0) > 30 and
+        stats_fora.get('perc_empates_fora', 0) > 30 and
+        abs(stats_casa.get('avg_gols_marcados_casa', 0) - stats_fora.get('avg_gols_marcados_fora', 0)) < 0.5):
 
-    avg_gols_h2h = confronto.get('avg_gols_h2h', 0)
-    total_jogos_h2h = confronto.get('total_jogos_h2h', 0)
-
-    if avg_gols_h2h > 3.0 and total_jogos_h2h >= 3:
-        motivo = f"Média de {avg_gols_h2h:.2f} gols nos últimos {total_jogos_h2h} confrontos."
-        return {'type': 'aposta', 'nome_estrategia': 'Clássico de Gols (Over 2.5)', 'mercado': 'Mais de 2.5 Gols', 'motivo': motivo, 'odd': 1.85}
+        motivo = "Ambos os times com mais de 30% de empates (casa/fora) e médias de gols similares."
+        odd = _encontrar_odd_especifica(jogo, 'Draw')
+        return {'type': 'aposta', 'nome_estrategia': 'Empate Valorizado', 'mercado': 'Empate', 'motivo': motivo, 'odd': odd, 'emoji': '🤝'}
     else:
-        if debug: return f"Reprovado. Média Gols H2H: {avg_gols_h2h:.2f}, Jogos H2H: {total_jogos_h2h}"
+        if debug: return "Critérios para tendência de empate não atendidos."
         return None
+
+# --- ESTRATÉGIAS DE FORMA RECENTE ---
 
 def analisar_forma_recente_casa(jogo, contexto, debug=False):
+    """Casa em boa forma recente contra visitante em má forma."""
     time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
     nome_casa = _get_nome_corrigido(time_casa_api, contexto)
     nome_fora = _get_nome_corrigido(time_fora_api, contexto)
@@ -132,18 +159,16 @@ def analisar_forma_recente_casa(jogo, contexto, debug=False):
         if debug: return "Times com menos de 5 jogos recentes."
         return None
 
-    vitorias_casa = forma_casa.count('V')
-    derrotas_fora = forma_fora.count('D')
-
-    if vitorias_casa >= 3 and derrotas_fora >= 3:
-        motivo = f"Forma Recente: Casa com {vitorias_casa}V/5j vs Visitante com {derrotas_fora}D/5j."
+    if forma_casa.count('V') >= 3 and forma_fora.count('D') >= 3:
+        motivo = f"Forma Recente: Casa com {forma_casa.count('V')}V/5j vs Visitante com {forma_fora.count('D')}D/5j."
         odd = _encontrar_odd_especifica(jogo, 'Home')
-        return {'type': 'aposta', 'nome_estrategia': 'Forma Recente (Casa Forte)', 'mercado': 'Casa para Vencer', 'motivo': motivo, 'odd': odd}
+        return {'type': 'aposta', 'nome_estrategia': 'Forma Recente (Casa Forte)', 'mercado': 'Casa para Vencer', 'motivo': motivo, 'odd': odd, 'emoji': '🔥'}
     else:
-        if debug: return f"Reprovado. Vitórias Recentes Casa: {vitorias_casa}, Derrotas Recentes Fora: {derrotas_fora}"
+        if debug: return f"Reprovado. Vitórias Recentes Casa: {forma_casa.count('V')}, Derrotas Recentes Fora: {forma_fora.count('D')}"
         return None
 
 def analisar_forma_recente_fora(jogo, contexto, debug=False):
+    """VERSÃO SIMÉTRICA: Visitante em boa forma recente contra mandante em má forma."""
     time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
     nome_casa = _get_nome_corrigido(time_casa_api, contexto)
     nome_fora = _get_nome_corrigido(time_fora_api, contexto)
@@ -160,61 +185,10 @@ def analisar_forma_recente_fora(jogo, contexto, debug=False):
         if debug: return "Times com menos de 5 jogos recentes."
         return None
 
-    derrotas_casa = forma_casa.count('D')
-    vitorias_fora = forma_fora.count('V')
-
-    if derrotas_casa >= 3 and vitorias_fora >= 3:
-        motivo = f"Forma Recente: Visitante com {vitorias_fora}V/5j vs Mandante com {derrotas_casa}D/5j."
+    if forma_casa.count('D') >= 3 and forma_fora.count('V') >= 3:
+        motivo = f"Forma Recente: Visitante com {forma_fora.count('V')}V/5j vs Mandante com {forma_casa.count('D')}D/5j."
         odd = _encontrar_odd_especifica(jogo, 'Away')
-        return {'type': 'aposta', 'nome_estrategia': 'Forma Recente (Visitante Forte)', 'mercado': 'Visitante para Vencer', 'motivo': motivo, 'odd': odd}
+        return {'type': 'aposta', 'nome_estrategia': 'Forma Recente (Visitante Forte)', 'mercado': 'Visitante para Vencer', 'motivo': motivo, 'odd': odd, 'emoji': '🔥'}
     else:
-        if debug: return f"Reprovado. Derrotas Recentes Casa: {derrotas_casa}, Vitórias Recentes Fora: {vitorias_fora}"
-        return None
-
-def analisar_ambas_marcam(jogo, contexto, debug=False):
-    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
-    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
-    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
-
-    if not nome_casa or not nome_fora:
-        if debug: return "Time sem correspondência no histórico."
-        return None
-
-    stats_casa = contexto['stats_individuais'][nome_casa]
-    stats_fora = contexto['stats_individuais'][nome_fora]
-
-    if (stats_casa.get('avg_gols_marcados_casa', 0) > 1.4 and
-        stats_casa.get('avg_gols_sofridos_casa', 0) > 0.8 and
-        stats_fora.get('avg_gols_marcados_fora', 0) > 1.2 and
-        stats_fora.get('avg_gols_sofridos_fora', 0) > 0.8):
-
-        motivo = "Ambos os times possuem ataques fortes e defesas que costumam sofrer gols."
-        return {'type': 'aposta', 'nome_estrategia': 'Ambas Marcam', 'mercado': 'Ambas Marcam - Sim', 'motivo': motivo, 'odd': 1.80}
-    else:
-        if debug: return "Times não se encaixam no padrão de ataque forte e defesa vulnerável."
-        return None
-
-def analisar_empate(jogo, contexto, debug=False):
-    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
-    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
-    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
-
-    if not nome_casa or not nome_fora:
-        if debug: return "Time sem correspondência no histórico."
-        return None
-
-    stats_casa = contexto['stats_individuais'][nome_casa]
-    stats_fora = contexto['stats_individuais'][nome_fora]
-
-    perc_vitorias_geral_casa = stats_casa.get('perc_vitorias_geral', 0)
-    perc_vitorias_geral_fora = stats_fora.get('perc_vitorias_geral', 0)
-    diff_forca = abs(perc_vitorias_geral_casa - perc_vitorias_geral_fora)
-    media_gols_jogo = (stats_casa.get('avg_gols_marcados_casa', 0) + stats_fora.get('avg_gols_marcados_fora', 0)) / 2
-
-    if diff_forca < 10 and media_gols_jogo < 1.3:
-        motivo = f"Equipes com forças equivalentes ({diff_forca:.1f}% de dif.) e tendência a poucos gols (média {media_gols_jogo:.2f})."
-        odd = _encontrar_odd_especifica(jogo, 'Draw')
-        return {'type': 'aposta', 'nome_estrategia': 'Tendência de Empate', 'mercado': 'Empate', 'motivo': motivo, 'odd': odd}
-    else:
-        if debug: return f"Dif. de força ({diff_forca:.1f}%) ou média de gols ({media_gols_jogo:.2f}) fora do padrão."
+        if debug: return f"Reprovado. Derrotas Recentes Casa: {forma_casa.count('D')}, Vitórias Recentes Fora: {forma_fora.count('V')}"
         return None
