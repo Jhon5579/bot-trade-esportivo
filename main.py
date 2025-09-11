@@ -9,7 +9,8 @@ from datetime import datetime, timezone, timedelta, date
 # --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from config import *
 from estrategias import *
-from api_externas import buscar_jogos_sofascore, buscar_odds_the_odds_api, verificar_resultado_sofascore
+# Importações atualizadas para API-Football
+from api_externas import buscar_jogos_api_football, buscar_odds_the_odds_api, verificar_resultado_api_football
 
 # --- ARQUIVOS E CONSTANTES ---
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
@@ -61,7 +62,7 @@ def determinar_resultado(aposta, placar_casa, placar_fora):
     if mercado == 'Mais de 2.5 Gols': return 'GREEN' if (placar_casa + placar_fora) > 2.5 else 'RED'
     return 'INDEFINIDO'
 
-def verificar_apostas_pendentes():
+def verificar_apostas_pendentes(api_key_football):
     print("\n--- 🔄 Verificando apostas pendentes... ---")
     apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, [])
     historico = carregar_json(ARQUIVO_HISTORICO, [])
@@ -70,7 +71,7 @@ def verificar_apostas_pendentes():
         return
     apostas_ainda_pendentes = []
     for aposta in apostas_pendentes:
-        status, placar_casa, placar_fora = verificar_resultado_sofascore(aposta['id_partida'])
+        status, placar_casa, placar_fora = verificar_resultado_api_football(api_key_football, aposta['id_partida'])
         if status == "encerrado":
             resultado = determinar_resultado(aposta, placar_casa, placar_fora)
             if resultado != 'INDEFINIDO':
@@ -139,17 +140,23 @@ def calcular_estatisticas_historicas(df):
     return stats_individuais, stats_h2h, forma_recente
 
 def rodar_analise_completa():
-    verificar_apostas_pendentes()
+    verificar_apostas_pendentes(API_KEY_FOOTBALL)
+    
     print(f"\n--- 🦅 Iniciando ciclo de análise de novas oportunidades... ---")
+    
     apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, [])
     ids_pendentes = [aposta['id_partida'] for aposta in apostas_pendentes]
-    jogos_principais = buscar_jogos_sofascore()
+    
+    jogos_principais = buscar_jogos_api_football(API_KEY_FOOTBALL)
+    
     dados_dia = carregar_json(ARQUIVO_JOGOS_DIA, {"data": "", "jogos": []})
     if dados_dia.get("data") != str(date.today()) and jogos_principais:
         print(f"  -> 💾 Salvando a lista de {len(jogos_principais)} jogos de hoje para futura atualização do histórico.")
         salvar_json({"data": str(date.today()), "jogos": jogos_principais}, ARQUIVO_JOGOS_DIA)
+        
     if not jogos_principais:
         print("Nenhum jogo novo encontrado. Encerrando o ciclo."); return
+        
     jogos_com_odds = buscar_odds_the_odds_api(API_KEY_ODDS)
     contexto = {"stats_individuais": {}, "stats_h2h": {}, "forma_recente": {}}
     try:
@@ -158,9 +165,8 @@ def rodar_analise_completa():
         contexto.update({"stats_individuais": stats_i, "stats_h2h": stats_h, "forma_recente": forma_r})
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo histórico '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado."); return
+        
     print(f"\n--- 🔬 Analisando {len(jogos_principais)} jogos encontrados... ---")
-
-    # --- LISTA ATUALIZADA COM SUAS ESTRATÉGIAS VALIDADAS ---
     lista_de_funcoes = [
         analisar_favorito_forte_fora,
         analisar_valor_mandante_azarao,
@@ -169,7 +175,7 @@ def rodar_analise_completa():
         analisar_forma_recente_casa,
         analisar_forma_recente_fora
     ]
-
+    
     for jogo in jogos_principais:
         id_partida, time_casa, time_fora = jogo.get('id_partida'), jogo['home_team'], jogo['away_team']
         if id_partida in ids_pendentes: continue
