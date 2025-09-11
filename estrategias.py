@@ -18,7 +18,7 @@ def _get_nome_corrigido(nome_time_api, contexto):
     if not contexto['lista_nomes_historico']:
         return None
 
-    melhor_match = process.extractOne(nome_time_api, contexto['lista_nomes_historico'], score_cutoff=85)
+    melhor_match = process.extractOne(nome_time_api, contexto['lista_nomes_historico'], score_cutoff=75)
 
     nome_correspondente = melhor_match[0] if melhor_match else None
     contexto['cache_nomes'][nome_time_api] = nome_correspondente
