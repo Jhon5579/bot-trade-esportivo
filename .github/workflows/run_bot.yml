@@ -1,46 +1,47 @@
-# .github/workflows/rodar-analise.yml
+# .github/workflows/rodar-analise.yml (Versão com Cache Persistente)
 
-# Nome da automação, que aparecerá na aba "Actions" do seu GitHub
 name: Análise de Jogos do Falcão
 
 on:
-  # Permite que você rode a automação manualmente a qualquer momento pelo site do GitHub
   workflow_dispatch:
-
   schedule:
-    # Roda a automação em um cronograma. A sintaxe é CRON.
-    # IMPORTANTE: O horário é em UTC (3 horas a mais que o horário de Brasília).
-    # Esta configuração roda o bot a cada hora, entre as 8h da manhã e a meia-noite (seu horário).
-    - cron: '0 11-23 * * *'  # Das 11h às 23h UTC (8h às 20h BRT)
-    - cron: '0 0-3 * * *'     # Das 0h às 3h UTC do dia seguinte (21h à 00h BRT)
+    - cron: '0 11-23 * * *'
+    - cron: '0 0-3 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # Passo 1: Baixa o código do seu repositório para a máquina virtual do GitHub
       - name: Baixando o código do repositório
         uses: actions/checkout@v4
 
-      # Passo 2: Configura o ambiente Python
+      # --- ETAPA DE CACHE (A MUDANÇA PRINCIPAL) ---
+      # 1. Tenta restaurar a pasta de cache da execução anterior
+      - name: Restaurando Cache
+        uses: actions/cache@v3
+        with:
+          path: . # O diretório a ser salvo/restaurado (a pasta principal)
+          # A chave de cache é baseada no dia. Um novo cache será criado a cada dia.
+          key: bot-cache-${{ github.run_id }}
+          restore-keys: |
+            bot-cache-
+
       - name: Configurando o ambiente Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Passo 3: Instala todas as dependências listadas no requirements.txt
       - name: Instalando as dependências
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Passo 4: Executa o Robô Falcão
       - name: Executando o Robô Falcão
         env:
           API_KEY: ${{ secrets.API_KEY }}
           API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }}
-          API_KEY_RUNDOWN: ${{ secrets.API_KEY_RUNDOWN }} # <-- LINHA QUE FALTAVA
+          API_KEY_RUNDOWN: ${{ secrets.API_KEY_RUNDOWN }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
