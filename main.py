@@ -1,4 +1,4 @@
-# main.py (Versão Final 2.5 - Completo e com Escapes Corrigidos)
+# main.py (Versão 2.6 Completa - Usando Master Team List)
 
 import requests
 import pandas as pd
@@ -8,7 +8,6 @@ from datetime import datetime, timezone, timedelta, date
 import os
 import csv
 
-# --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from estrategias import *
 from api_externa import (
     buscar_jogos_api_football, buscar_odds_the_odds_api, 
@@ -18,6 +17,7 @@ from api_externa import (
 
 # --- ARQUIVOS E CONSTANTES ---
 ARQUIVO_HISTORICO_CORRIGIDO = 'dados_historicos_corrigido.csv'
+ARQUIVO_MASTER_LIST = 'master_team_list.json'
 ARQUIVO_PENDENTES = 'apostas_pendentes.json'
 ARQUIVO_HISTORICO = 'historico_de_apostas.json'
 ARQUIVO_JOGOS_DIA = 'jogos_a_acompanhar.json'
@@ -31,7 +31,6 @@ def enviar_alerta_telegram(mensagem, telegram_token, telegram_chat_id):
     if not telegram_token or not telegram_chat_id:
         print("  -> AVISO: Tokens do Telegram não configurados nos Secrets.")
         return
-    # Esta função centraliza 100% do escape de caracteres para o MarkdownV2
     caracteres_especiais = ['_', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in caracteres_especiais:
         mensagem = mensagem.replace(char, f'\\{char}')
@@ -71,85 +70,56 @@ def atualizar_historico_local(api_keys):
     print("\n--- 💾 Verificando se há histórico para atualizar... ---")
     jogos_para_atualizar = carregar_json(ARQUIVO_JOGOS_DIA, {"data": "", "jogos": []})
     data_hoje_str = str(date.today())
-
     if not jogos_para_atualizar.get('jogos') or jogos_para_atualizar.get('data') == data_hoje_str:
         print("  -> Nenhuma atualização de histórico necessária.")
         return
-
     print(f"  -> Encontrados {len(jogos_para_atualizar['jogos'])} jogos do dia {jogos_para_atualizar['data']} para atualizar.")
     ids_para_buscar = [jogo['id_partida'] for jogo in jogos_para_atualizar['jogos']]
-    
     resultados = buscar_resultados_por_ids(api_keys['football'], ids_para_buscar)
-    
     if not resultados:
-        print("  -> Não foi possível obter os resultados. Tentaremos na próxima vez.")
-        return
-
+        print("  -> Não foi possível obter os resultados."); return
     novas_linhas_csv = []
     for jogo in resultados:
-        status = jogo.get('fixture', {}).get('status', {}).get('short', '')
-        if status == 'FT':
+        if jogo.get('fixture', {}).get('status', {}).get('short', '') == 'FT':
             gols_casa = jogo.get('goals', {}).get('home')
             gols_fora = jogo.get('goals', {}).get('away')
-            
             if gols_casa is None or gols_fora is None: continue
-
             data_jogo = datetime.fromtimestamp(jogo['fixture']['timestamp']).strftime('%d/%m/%Y')
             resultado_final = 'D'
             if gols_casa > gols_fora: resultado_final = 'H'
             elif gols_fora > gols_casa: resultado_final = 'A'
-
-            nova_linha = {
-                'Date': data_jogo, 'HomeTeam': jogo['teams']['home']['name'],
-                'AwayTeam': jogo['teams']['away']['name'], 'FTHG': gols_casa,
-                'FTAG': gols_fora, 'FTR': resultado_final
-            }
-            novas_linhas_csv.append(nova_linha)
-    
+            novas_linhas_csv.append({'Date': data_jogo, 'HomeTeam': jogo['teams']['home']['name'], 'AwayTeam': jogo['teams']['away']['name'], 'FTHG': gols_casa, 'FTAG': gols_fora, 'FTR': resultado_final})
     if novas_linhas_csv:
         try:
             fieldnames = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR']
             with open(ARQUIVO_HISTORICO_CORRIGIDO, 'a', newline='', encoding='utf-8') as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
-                if f.tell() == 0:
-                    writer.writeheader()
+                if f.tell() == 0: writer.writeheader()
                 for linha in novas_linhas_csv:
-                    linha_filtrada = {key: linha.get(key, '') for key in fieldnames}
-                    writer.writerow(linha_filtrada)
+                    writer.writerow({key: linha.get(key, '') for key in fieldnames})
             print(f"  -> ✅ Histórico atualizado com {len(novas_linhas_csv)} novos resultados!")
-        except Exception as e:
-            print(f"  -> ❌ ERRO ao escrever no arquivo CSV: {e}")
-
+        except Exception as e: print(f"  -> ❌ ERRO ao escrever no arquivo CSV: {e}")
     salvar_json({"data": data_hoje_str, "jogos": []}, ARQUIVO_JOGOS_DIA)
 
 def verificar_apostas_pendentes(api_key_football, telegram_config):
     print("\n--- 🔄 Verificando apostas pendentes... ---")
-    apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, [])
-    historico = carregar_json(ARQUIVO_HISTORICO, [])
-    if not apostas_pendentes:
-        print("  -> Nenhuma aposta pendente para verificar.")
-        return
-        
+    apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, []); historico = carregar_json(ARQUIVO_HISTORICO, [])
+    if not apostas_pendentes: print("  -> Nenhuma aposta pendente para verificar."); return
     apostas_ainda_pendentes = []
     for aposta in apostas_pendentes:
         status, placar_casa, placar_fora = verificar_resultado_api_football(api_key_football, aposta['id_partida'])
         if status == "encerrado":
             resultado = determinar_resultado(aposta, placar_casa, placar_fora)
             if resultado != 'INDEFINIDO':
-                aposta['resultado'] = resultado
-                aposta['placar_final'] = f"{placar_casa} x {placar_fora}"
+                aposta.update({'resultado': resultado, 'placar_final': f"{placar_casa} x {placar_fora}"})
                 print(f"  -> Jogo finalizado: {aposta['times']}. Resultado: {resultado}")
                 emoji = '✅' if resultado == 'GREEN' else '❌'
                 mensagem = f"*{emoji} RESULTADO DA ENTRADA {emoji}*\n\n*⚽ JOGO:* {aposta['times']}\n*📈 MERCADO:* {aposta['mercado']}\n*📊 PLACAR FINAL:* {aposta['placar_final']}\n\n*🎯 RESULTADO:* *{resultado}*"
                 enviar_alerta_telegram(mensagem, telegram_config['token'], telegram_config['chat_id'])
                 historico.append(aposta)
-            else:
-                apostas_ainda_pendentes.append(aposta)
-        else:
-            apostas_ainda_pendentes.append(aposta)
-            
-    salvar_json(apostas_ainda_pendentes, ARQUIVO_PENDENTES)
-    salvar_json(historico, ARQUIVO_HISTORICO)
+            else: apostas_ainda_pendentes.append(aposta)
+        else: apostas_ainda_pendentes.append(aposta)
+    salvar_json(apostas_ainda_pendentes, ARQUIVO_PENDENTES); salvar_json(historico, ARQUIVO_HISTORICO)
 
 def calcular_estatisticas_historicas(df):
     if df.empty: return {}, {}, {}
@@ -163,8 +133,7 @@ def calcular_estatisticas_historicas(df):
         df.dropna(subset=['Date'], inplace=True)
         df.sort_values(by='Date', inplace=True)
     except Exception:
-        print(" -> ERRO: Falha ao converter a coluna de datas.")
-        return {}, {}, {}
+        print(" -> ERRO: Falha ao converter a coluna de datas."); return {}, {}, {}
     df['ResultadoCasa'] = df.apply(lambda r: 'V' if r['FTHG'] > r['FTAG'] else ('E' if r['FTHG'] == r['FTAG'] else 'D'), axis=1)
     df['ResultadoFora'] = df.apply(lambda r: 'V' if r['FTAG'] > r['FTHG'] else ('E' if r['FTAG'] == r['FTHG'] else 'D'), axis=1)
     print("  -> 📊 Pré-calculando estatísticas gerais e de forma recente...")
@@ -218,8 +187,7 @@ def rodar_analise_completa(api_keys, telegram_config):
     if not jogos_principais: print("Nenhum jogo novo encontrado."); return
         
     dados_dia = carregar_json(ARQUIVO_JOGOS_DIA, {"data": "", "jogos": []})
-    if dados_dia.get("data") != str(date.today()) or not dados_dia.get("jogos"):
-        print(f"  -> 💾 Salvando a lista de {len(jogos_principais)} jogos de hoje para futura atualização do histórico.")
+    if dados_dia.get("data") != data_hoje_str or not dados_dia.get("jogos"):
         salvar_json({"data": str(date.today()), "jogos": jogos_principais}, ARQUIVO_JOGOS_DIA)
         
     jogos_com_odds = buscar_odds_the_odds_api(api_keys['odds'])
@@ -228,6 +196,15 @@ def rodar_analise_completa(api_keys, telegram_config):
         df_historico = pd.read_csv(ARQUIVO_HISTORICO_CORRIGIDO, low_memory=False)
         stats_i, stats_h, forma_r = calcular_estatisticas_historicas(df_historico.copy())
         contexto.update({"stats_individuais": stats_i, "stats_h2h": stats_h, "forma_recente": forma_r})
+
+        print("  -> 🗺️  Carregando mapa de nomes (Master Team List)...")
+        mapa_de_nomes = carregar_json(ARQUIVO_MASTER_LIST, {})
+        if mapa_de_nomes:
+            contexto['mapa_de_nomes'] = mapa_de_nomes
+            print(f"  -> Mapa com {len(mapa_de_nomes)} times carregado com sucesso.")
+        else:
+            print("  -> ⚠️ AVISO: Arquivo master_team_list.json não encontrado ou vazio.")
+
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo histórico '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado."); return
         
