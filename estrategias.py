@@ -1,4 +1,4 @@
-# estrategias.py (Versão Final 2.9 - Com Estratégia de Tabela)
+# estrategias.py (Versão 2.10 - Com Tradução Unificada)
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -27,7 +27,6 @@ def _encontrar_odd_especifica(jogo, mercado):
 def analisar_confronto_de_opostos(jogo, contexto, debug=False):
     """
     Analisa jogos entre times de ponta e times do fundo da tabela.
-    Usa os dados de classificação da The Rundown.
     """
     tabelas = contexto.get('tabelas_ligas', {})
     tabela_do_jogo = tabelas.get(jogo['league_id'])
@@ -36,29 +35,20 @@ def analisar_confronto_de_opostos(jogo, contexto, debug=False):
         if debug: return "Tabela de classificação não disponível para esta liga."
         return None
 
-    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
-    
-    # Tentamos encontrar os nomes dos times na tabela que carregamos
-    nome_casa_na_tabela = None
-    nome_fora_na_tabela = None
-    
-    # A correspondência de nomes pode ser um desafio entre APIs.
-    # Esta é uma abordagem simples. Poderia ser melhorada com o master_team_list se necessário.
-    for nome_tabela in tabela_do_jogo.keys():
-        if time_casa_api.lower() in nome_tabela.lower() or nome_tabela.lower() in time_casa_api.lower():
-            nome_casa_na_tabela = nome_tabela
-        if time_fora_api.lower() in nome_tabela.lower() or nome_tabela.lower() in time_fora_api.lower():
-            nome_fora_na_tabela = nome_tabela
+    # Usa a MESMA função de tradução das outras estratégias.
+    time_casa_traduzido = _get_nome_corrigido(jogo['home_team'], contexto)
+    time_fora_traduzido = _get_nome_corrigido(jogo['away_team'], contexto)
 
-    if not nome_casa_na_tabela or not nome_fora_na_tabela:
-        if debug: return "Time sem correspondência na tabela de classificação."
+    if not time_casa_traduzido or not time_fora_traduzido:
+        if debug: return "Time sem correspondência no master_team_list para esta estratégia."
         return None
         
-    stats_casa = tabela_do_jogo.get(nome_casa_na_tabela)
-    stats_fora = tabela_do_jogo.get(nome_fora_na_tabela)
+    # Agora procuramos o nome TRADUZIDO na tabela
+    stats_casa = tabela_do_jogo.get(time_casa_traduzido)
+    stats_fora = tabela_do_jogo.get(time_fora_traduzido)
 
     if not stats_casa or not stats_fora:
-        if debug: return "Stats não encontrados para um dos times na tabela."
+        if debug: return f"Time '{time_casa_traduzido}' ou '{time_fora_traduzido}' não encontrado na tabela."
         return None
         
     posicao_casa = stats_casa.get('rank', 99)
