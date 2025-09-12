@@ -1,15 +1,15 @@
-# api_externa.py (Versão Final 2.9)
+# api_externa.py (Versão à Prova de Falhas)
 
 import requests
 from datetime import date, datetime
 from gerenciador_cache import ler_cache, salvar_cache
 import math
 
-# --- CONSTANTES DE CACHE ---
-CACHE_JOGOS_API_FOOTBALL = 'cache/jogos_api_football.json'
-CACHE_ODDS_API = 'cache/odds_api.json'
+# --- CONSTANTES DE CACHE (SEM A PASTA 'cache/') ---
+CACHE_JOGOS_API_FOOTBALL = 'cache_jogos_api_football.json'
+CACHE_ODDS_API = 'cache_odds_api.json'
 VALIDADE_CACHE_HORAS = 2
-VALIDADE_CACHE_TABELA_HORAS = 24 # Cache longo para as tabelas
+VALIDADE_CACHE_TABELA_HORAS = 24
 
 def buscar_jogos_api_football(api_key):
     print(f"\n--- ⚽ Buscando jogos do dia na API-Football... ---")
@@ -56,7 +56,7 @@ def buscar_jogos_api_football(api_key):
 
 def buscar_estatisticas_time(api_key, time_id, league_id):
     season = datetime.now().year
-    cache_file = f"cache/stats_time_{time_id}_{season}_{league_id}.json"
+    cache_file = f"cache_stats_time_{time_id}_{season}_{league_id}.json"
     dados_cache = ler_cache(cache_file, VALIDADE_CACHE_HORAS)
     if dados_cache is not None:
         return dados_cache
@@ -172,18 +172,14 @@ def verificar_resultado_api_football(api_key, id_partida):
     return "erro", None, None
 
 def buscar_tabela_rundown(api_key, league_id):
-    """
-    Busca a tabela de classificação de uma liga na The Rundown.
-    Usa um cache longo de 24 horas.
-    """
-    cache_file = f"cache/tabela_liga_{league_id}.json"
+    cache_file = f"cache_tabela_liga_{league_id}.json"
     dados_cache = ler_cache(cache_file, VALIDADE_CACHE_TABELA_HORAS)
     if dados_cache is not None:
         return dados_cache
 
     print(f"  -> 📞 Buscando tabela da liga {league_id} na The Rundown (cache de 24h)...")
     
-    SPORT_ID = 4 # ID do esporte para futebol na The Rundown
+    SPORT_ID = 4
     
     headers = {
         'x-rapidapi-host': "therundown-therundown-v1-pro.p.rapidapi.com",
@@ -195,11 +191,9 @@ def buscar_tabela_rundown(api_key, league_id):
         response = requests.get(url, headers=headers, params={'format': 'json'}, timeout=20)
         if response.status_code == 200:
             data = response.json()
-            # A API retorna uma lista de tabelas (ex: temporada regular, grupos). Pegamos a primeira.
             if data and data.get('standings') and data['standings'][0].get('teams'):
                 tabela_formatada = {}
                 for time_info in data['standings'][0]['teams']:
-                    # A chave do nosso dicionário será o nome do time
                     tabela_formatada[time_info['name']] = {
                         'rank': time_info.get('rank'),
                         'wins': time_info.get('wins'),
