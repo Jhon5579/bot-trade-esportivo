@@ -1,114 +1,93 @@
-# api_externas.py
+# estrategias.py (Versão 2.3 com Pré-Aprovação)
 
-import requests
-from datetime import date
-from decouple import config
+from thefuzz import process
 
-def buscar_jogos_api_football(api_key):
-    """
-    Busca na API-Football TODOS os jogos do dia com uma única chamada.
-    NOTA: O plano gratuito retornará apenas jogos das ligas disponíveis na sua assinatura.
-    """
-    DATA_HOJE = date.today().strftime('%Y-%m-%d')
-    headers = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': api_key}
-    todos_os_jogos = []
+def _get_nome_corrigido(nome_time_api, contexto):
+    if 'cache_nomes' not in contexto:
+        contexto['cache_nomes'] = {}
+        contexto['lista_nomes_historico'] = list(contexto.get('stats_individuais', {}).keys())
+    if nome_time_api in contexto['cache_nomes']:
+        return contexto['cache_nomes'][nome_time_api]
+    if not contexto['lista_nomes_historico']:
+        return None
+    melhor_match = process.extractOne(nome_time_api, contexto['lista_nomes_historico'], score_cutoff=75)
+    nome_correspondente = melhor_match[0] if melhor_match else None
+    contexto['cache_nomes'][nome_time_api] = nome_correspondente
+    return nome_correspondente
 
-    print(f"--- ⚽ Buscando TODOS os jogos do dia {DATA_HOJE} na API-Football (1 chamada)... ---")
+def _encontrar_odd_especifica(jogo, mercado):
+    bookmakers = jogo.get('bookmakers', [])
+    if not bookmakers: return None
+    for bookmaker in bookmakers:
+        for market in bookmaker.get('markets', []):
+            if market.get('key') == 'h2h':
+                for outcome in market.get('outcomes', []):
+                    if outcome.get('name') == mercado:
+                        return outcome.get('price')
+    return None
 
-    url = f"https://v3.football.api-sports.io/fixtures?date={DATA_HOJE}"
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=30)
-        
-        if response.status_code == 200:
-            data = response.json().get('response', [])
-            if data:
-                print(f"--- ✅ Sucesso! Encontrados {len(data)} jogos no total. ---")
-                for fixture in data:
-                    jogo = {
-                        'id_partida': fixture['fixture']['id'],
-                        'home_team': fixture['teams']['home']['name'],
-                        'away_team': fixture['teams']['away']['name'],
-                        'league': fixture['league']['name'],
-                        'timestamp': fixture['fixture']['timestamp']
-                    }
-                    todos_os_jogos.append(jogo)
-            else:
-                print("--- ⚠️ Nenhum jogo encontrado para hoje na API-Football. ---")
-        else:
-            print(f"--- ❌ Erro ao buscar os jogos: {response.status_code} - {response.text} ---")
+def analisar_favorito_forte_fora(jogo, contexto, debug=False):
+    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
+    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
+    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
+    if not nome_casa or not nome_fora: return "Time sem correspondência no histórico." if debug else None
+    stats_casa = contexto['stats_individuais'][nome_casa]
+    stats_fora = contexto['stats_individuais'][nome_fora]
+    if (stats_fora.get('perc_vitorias_fora', 0) > 70 and stats_casa.get('perc_derrotas_casa', 0) > 70):
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Favorito Forte Fora', 'mercado': 'Visitante para Vencer', 'emoji': '🚀'}
+    return "Critérios de favoritismo extremo do visitante não atendidos." if debug else None
 
-    except requests.exceptions.RequestException as e:
-        print(f"--- ❌ Erro de conexão com a API-Football: {e} ---")
-        
-    return todos_os_jogos
+def analisar_valor_mandante_azarao(jogo, contexto, debug=False):
+    time_casa_api = jogo['home_team']
+    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
+    if not nome_casa: return "Time da casa sem correspondência no histórico." if debug else None
+    stats_casa = contexto['stats_individuais'][nome_casa]
+    odd_casa = _encontrar_odd_especifica(jogo, 'Home')
+    if not odd_casa: return "Odd do mandante não encontrada." if debug else None
+    if (odd_casa > 2.0 and stats_casa.get('perc_vitorias_casa', 0) > 45):
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Valor no Mandante Azarão', 'mercado': 'Casa para Vencer', 'emoji': '💎'}
+    return "Critérios de valor para o mandante azarão não atendidos." if debug else None
 
+def analisar_valor_visitante_azarao(jogo, contexto, debug=False):
+    time_fora_api = jogo['away_team']
+    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
+    if not nome_fora: return "Time visitante sem correspondência no histórico." if debug else None
+    stats_fora = contexto['stats_individuais'][nome_fora]
+    odd_visitante = _encontrar_odd_especifica(jogo, 'Away')
+    if not odd_visitante: return "Odd do visitante não encontrada." if debug else None
+    if (odd_visitante > 2.2 and stats_fora.get('perc_vitorias_fora', 0) > 40):
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Valor no Visitante Azarão', 'mercado': 'Visitante para Vencer', 'emoji': '💎'}
+    return "Critérios de valor para o visitante azarão não atendidos." if debug else None
 
-def buscar_odds_the_odds_api(api_key):
-    """
-    Busca odds na The Odds API, procurando em múltiplas casas de apostas.
-    """
-    print("\n--- 👍 Buscando odds disponíveis na The Odds API... ---")
-    
-    CASAS_DE_APOSTAS = 'pinnacle,betfair,bet365,marathonbet'
-    params = {
-        'api_key': api_key, 'regions': 'br,eu',
-        'markets': 'h2h', 'bookmakers': CASAS_DE_APOSTAS,
-        'oddsFormat': 'decimal'
-    }
-    url = "https://api.the-odds-api.com/v4/sports/soccer/odds"
-    jogos_com_odds = []
-    
-    try:
-        response = requests.get(url, params=params, timeout=20)
-        if response.status_code == 200:
-            data = response.json()
-            if data:
-                print(f"  -> ✅ Sucesso! Encontradas odds para {len(data)} jogos.")
-                for jogo in data:
-                    jogos_com_odds.append({
-                        'id': jogo.get('id'),
-                        'home_team': jogo.get('home_team'),
-                        'away_team': jogo.get('away_team'),
-                        'bookmakers': jogo.get('bookmakers', [])
-                    })
-            else:
-                print("  -> Nenhuma odd encontrada na The Odds API para os parâmetros atuais.")
-        else:
-            print(f"\n--- 🚨 ERRO AO CHAMAR A THE ODDS API 🚨 ---")
-            print(f"  -> Status da Resposta: {response.status_code}")
-            print(f"  -> Mensagem de Erro: {response.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ERRO de conexão com a The Odds API: {e}")
-        
-    return jogos_com_odds
+def analisar_empate_valorizado(jogo, contexto, debug=False):
+    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
+    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
+    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
+    if not nome_casa or not nome_fora: return "Time sem correspondência no histórico." if debug else None
+    stats_casa = contexto['stats_individuais'][nome_casa]
+    stats_fora = contexto['stats_individuais'][nome_fora]
+    if (stats_casa.get('perc_empates_casa', 0) > 30 and stats_fora.get('perc_empates_fora', 0) > 30):
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Empate Valorizado', 'mercado': 'Empate', 'emoji': '🤝'}
+    return "Critérios para tendência de empate não atendidos." if debug else None
 
+def analisar_forma_recente_casa(jogo, contexto, debug=False):
+    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
+    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
+    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
+    if not nome_casa or not nome_fora: return "Time sem correspondência no histórico." if debug else None
+    forma = contexto.get('forma_recente', {}); forma_casa = forma.get(nome_casa, []); forma_fora = forma.get(nome_fora, [])
+    if len(forma_casa) < 5 or len(forma_fora) < 5: return "Times com menos de 5 jogos recentes." if debug else None
+    if forma_casa.count('V') >= 3 and forma_fora.count('D') >= 3:
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Forma Recente (Casa Forte)', 'mercado': 'Casa para Vencer', 'emoji': '🔥'}
+    return f"Reprovado. Vitórias Recentes Casa: {forma_casa.count('V')}, Derrotas Recentes Fora: {forma_fora.count('D')}" if debug else None
 
-def verificar_resultado_api_football(api_key, id_partida):
-    """
-    Verifica o status e o resultado final de uma partida específica na API-Football.
-    Esta função consome 1 chamada da sua cota para cada aposta verificada.
-    """
-    headers = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': api_key}
-    url = f"https://v3.football.api-sports.io/fixtures?id={id_partida}"
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code == 200:
-            data = response.json().get('response', [])
-            if data:
-                fixture_data = data[0]
-                status = fixture_data.get('fixture', {}).get('status', {}).get('short', 'NS')
-                
-                # 'FT' é o código para 'Full Time' (Partida Encerrada)
-                if status == 'FT':
-                    placar_casa = fixture_data.get('goals', {}).get('home', -1)
-                    placar_fora = fixture_data.get('goals', {}).get('away', -1)
-                    return "encerrado", placar_casa, placar_fora
-                else:
-                    return "em_andamento", None, None
-    except requests.exceptions.RequestException as e:
-        print(f"  -> ERRO de conexão ao verificar resultado: {e}")
-        return "erro", None, None
-        
-    return "erro", None, None
+def analisar_forma_recente_fora(jogo, contexto, debug=False):
+    time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
+    nome_casa = _get_nome_corrigido(time_casa_api, contexto)
+    nome_fora = _get_nome_corrigido(time_fora_api, contexto)
+    if not nome_casa or not nome_fora: return "Time sem correspondência no histórico." if debug else None
+    forma = contexto.get('forma_recente', {}); forma_casa = forma.get(nome_casa, []); forma_fora = forma.get(nome_fora, [])
+    if len(forma_casa) < 5 or len(forma_fora) < 5: return "Times com menos de 5 jogos recentes." if debug else None
+    if forma_casa.count('D') >= 3 and forma_fora.count('V') >= 3:
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Forma Recente (Visitante Forte)', 'mercado': 'Visitante para Vencer', 'emoji': '🔥'}
+    return f"Reprovado. Derrotas Recentes Casa: {forma_casa.count('D')}, Vitórias Recentes Fora: {forma_fora.count('V')}" if debug else None
