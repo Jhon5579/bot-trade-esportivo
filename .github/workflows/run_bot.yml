@@ -27,7 +27,7 @@ jobs:
       - name: Configurando o ambiente Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # Usaremos uma versão moderna do Python
+          python-version: '3.10'
 
       # Passo 3: Instala todas as dependências listadas no requirements.txt
       - name: Instalando as dependências
@@ -37,10 +37,10 @@ jobs:
 
       # Passo 4: Executa o Robô Falcão
       - name: Executando o Robô Falcão
-        # Este é o passo crucial que entrega os segredos para o seu script
         env:
           API_KEY: ${{ secrets.API_KEY }}
           API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }}
+          API_KEY_RUNDOWN: ${{ secrets.API_KEY_RUNDOWN }} # <-- LINHA QUE FALTAVA
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
