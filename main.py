@@ -1,4 +1,4 @@
-# main.py (Versão 2.12 Completa - Correção do Efeito Dominó)
+# main.py (Versão 2.12 Completa - Com Caixa-Preta de Erros)
 
 import requests
 import pandas as pd
@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timezone, timedelta, date
 import os
 import csv
+import traceback
 
 from estrategias import *
 from api_externa import (
@@ -293,7 +294,13 @@ def rodar_analise_completa(api_keys, telegram_config):
                 print("  -> Nenhuma oportunidade encontrada para este jogo após todas as análises.")
 
         except Exception as e:
-            print(f"  -> ‼️ ERRO GERAL INESPERADO na análise do jogo {jogo.get('home_team')} vs {jogo.get('away_team')}: {e}. Pulando.")
+            print(f"  -> ‼️ ERRO INESPERADO E GRAVE na análise do jogo {jogo.get('home_team')} vs {jogo.get('away_team')}.")
+            print(f"     TIPO DE ERRO: {type(e).__name__}")
+            print(f"     MENSAGEM: {e}")
+            print("     RASTREAMENTO COMPLETO DO ERRO (CAIXA-PRETA):")
+            traceback.print_exc()
+            print("     -------------------------------------------")
+            print("     Pulando para o próximo jogo...")
             continue
 
     if not novas_oportunidades_encontradas:
