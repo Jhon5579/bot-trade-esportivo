@@ -1,6 +1,4 @@
-# estrategias.py (Versão de Teste - Sem Confronto de Opostos)
-
-# --- FUNÇÕES AUXILIARES ---
+# estrategias.py (Versão 2.13 - Correção Final de Dados)
 
 def _get_nome_corrigido(nome_time_api, contexto):
     """
@@ -14,7 +12,13 @@ def _encontrar_odd_especifica(jogo, mercado):
     """Encontra a odd de um mercado específico (Home, Away, Draw)."""
     bookmakers = jogo.get('bookmakers', [])
     if not bookmakers: return None
+    
     for bookmaker in bookmakers:
+        # ### NOVA VERIFICAÇÃO DE SEGURANÇA ###
+        # Garante que o 'bookmaker' é um dicionário antes de tentar usar .get()
+        if not isinstance(bookmaker, dict):
+            continue # Pula para o próximo item da lista se o formato for inesperado
+
         for market in bookmaker.get('markets', []):
             if market.get('key') == 'h2h':
                 for outcome in market.get('outcomes', []):
@@ -22,7 +26,36 @@ def _encontrar_odd_especifica(jogo, mercado):
                         return outcome.get('price')
     return None
 
-# --- ESTRATÉGIAS EXISTENTES ---
+# --- ESTRATÉGIAS ---
+# Nenhuma das funções de estratégia abaixo precisa ser alterada.
+
+def analisar_confronto_de_opostos(jogo, contexto, debug=False):
+    tabelas = contexto.get('tabelas_ligas', {})
+    tabela_do_jogo = tabelas.get(jogo['league_id'])
+    if not tabela_do_jogo:
+        if debug: return "Tabela de classificação não disponível para esta liga."
+        return None
+    time_casa_traduzido = _get_nome_corrigido(jogo['home_team'], contexto)
+    time_fora_traduzido = _get_nome_corrigido(jogo['away_team'], contexto)
+    if not time_casa_traduzido or not time_fora_traduzido:
+        if debug: return "Time sem correspondência no master_team_list."
+        return None
+    stats_casa = tabela_do_jogo.get(time_casa_traduzido)
+    stats_fora = tabela_do_jogo.get(time_fora_traduzido)
+    if not stats_casa or not stats_fora:
+        if debug: return f"Time '{time_casa_traduzido}' ou '{time_fora_traduzido}' não encontrado na tabela."
+        return None
+    posicao_casa = stats_casa.get('rank', 99)
+    posicao_fora = stats_fora.get('rank', 99)
+    if not isinstance(posicao_casa, int) or not isinstance(posicao_fora, int):
+        if debug: return "Posição (rank) inválida na tabela de classificação."
+        return None
+    if posicao_casa <= 4 and posicao_fora >= 16:
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Confronto de Opostos (Casa Fav)', 'mercado': 'Casa para Vencer', 'emoji': '🥇'}
+    if posicao_fora <= 4 and posicao_casa >= 16:
+        return {'type': 'pre_aprovado', 'nome_estrategia': 'Confronto de Opostos (Fora Fav)', 'mercado': 'Visitante para Vencer', 'emoji': '🥇'}
+    if debug: return f"Não é um confronto de opostos (Posições: {posicao_casa}º vs {posicao_fora}º)."
+    return None
 
 def analisar_favorito_forte_fora(jogo, contexto, debug=False):
     time_casa_api, time_fora_api = jogo['home_team'], jogo['away_team']
