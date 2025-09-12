@@ -1,4 +1,4 @@
-# api_externa.py (Versão Final 2.4)
+# api_externa.py (Versão Final 2.9)
 
 import requests
 from datetime import date, datetime
@@ -9,6 +9,7 @@ import math
 CACHE_JOGOS_API_FOOTBALL = 'cache/jogos_api_football.json'
 CACHE_ODDS_API = 'cache/odds_api.json'
 VALIDADE_CACHE_HORAS = 2
+VALIDADE_CACHE_TABELA_HORAS = 24 # Cache longo para as tabelas
 
 def buscar_jogos_api_football(api_key):
     print(f"\n--- ⚽ Buscando jogos do dia na API-Football... ---")
@@ -169,3 +170,48 @@ def verificar_resultado_api_football(api_key, id_partida):
     except requests.exceptions.RequestException as e:
         print(f"  -> ERRO de conexão ao verificar resultado para ID {id_partida}: {e}")
     return "erro", None, None
+
+def buscar_tabela_rundown(api_key, league_id):
+    """
+    Busca a tabela de classificação de uma liga na The Rundown.
+    Usa um cache longo de 24 horas.
+    """
+    cache_file = f"cache/tabela_liga_{league_id}.json"
+    dados_cache = ler_cache(cache_file, VALIDADE_CACHE_TABELA_HORAS)
+    if dados_cache is not None:
+        return dados_cache
+
+    print(f"  -> 📞 Buscando tabela da liga {league_id} na The Rundown (cache de 24h)...")
+    
+    SPORT_ID = 4 # ID do esporte para futebol na The Rundown
+    
+    headers = {
+        'x-rapidapi-host': "therundown-therundown-v1-pro.p.rapidapi.com",
+        'x-rapidapi-key': api_key
+    }
+    url = f"https://therundown-therundown-v1-pro.p.rapidapi.com/sports/{SPORT_ID}/leagues/{league_id}/standings"
+    
+    try:
+        response = requests.get(url, headers=headers, params={'format': 'json'}, timeout=20)
+        if response.status_code == 200:
+            data = response.json()
+            # A API retorna uma lista de tabelas (ex: temporada regular, grupos). Pegamos a primeira.
+            if data and data.get('standings') and data['standings'][0].get('teams'):
+                tabela_formatada = {}
+                for time_info in data['standings'][0]['teams']:
+                    # A chave do nosso dicionário será o nome do time
+                    tabela_formatada[time_info['name']] = {
+                        'rank': time_info.get('rank'),
+                        'wins': time_info.get('wins'),
+                        'losses': time_info.get('losses'),
+                        'draws': time_info.get('draws'),
+                        'points': time_info.get('points')
+                    }
+                salvar_cache(cache_file, tabela_formatada)
+                return tabela_formatada
+            else:
+                print(f"  -> AVISO: Tabela não disponível na The Rundown para a liga {league_id}.")
+    except requests.exceptions.RequestException as e:
+        print(f"  -> ERRO de conexão ao buscar tabela da liga {league_id}: {e}")
+        
+    return None
