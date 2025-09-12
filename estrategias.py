@@ -1,4 +1,6 @@
-# estrategias.py (Versão 2.10 - Com Tradução Unificada)
+# estrategias.py (Versão 2.12 - Super Defensiva)
+
+from thefuzz import process
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -35,15 +37,13 @@ def analisar_confronto_de_opostos(jogo, contexto, debug=False):
         if debug: return "Tabela de classificação não disponível para esta liga."
         return None
 
-    # Usa a MESMA função de tradução das outras estratégias.
     time_casa_traduzido = _get_nome_corrigido(jogo['home_team'], contexto)
     time_fora_traduzido = _get_nome_corrigido(jogo['away_team'], contexto)
 
     if not time_casa_traduzido or not time_fora_traduzido:
-        if debug: return "Time sem correspondência no master_team_list para esta estratégia."
+        if debug: return "Time sem correspondência no master_team_list."
         return None
         
-    # Agora procuramos o nome TRADUZIDO na tabela
     stats_casa = tabela_do_jogo.get(time_casa_traduzido)
     stats_fora = tabela_do_jogo.get(time_fora_traduzido)
 
@@ -54,7 +54,10 @@ def analisar_confronto_de_opostos(jogo, contexto, debug=False):
     posicao_casa = stats_casa.get('rank', 99)
     posicao_fora = stats_fora.get('rank', 99)
 
-    # Regra: Um time no G4 (top 4) contra um time nos últimos 4 (posição >= 16 para ligas de 20)
+    if not isinstance(posicao_casa, int) or not isinstance(posicao_fora, int):
+        if debug: return "Posição (rank) inválida na tabela de classificação."
+        return None
+
     if posicao_casa <= 4 and posicao_fora >= 16:
         return {'type': 'pre_aprovado', 'nome_estrategia': 'Confronto de Opostos (Casa Fav)', 'mercado': 'Casa para Vencer', 'emoji': '🥇'}
     
