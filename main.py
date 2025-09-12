@@ -1,4 +1,4 @@
-# main.py (Versão 2.6 Completa - Usando Master Team List)
+# main.py (Versão 2.7 Completa - Mais Robusto)
 
 import requests
 import pandas as pd
@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta, date
 import os
 import csv
 
+# --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from estrategias import *
 from api_externa import (
     buscar_jogos_api_football, buscar_odds_the_odds_api, 
@@ -172,31 +173,25 @@ def rodar_analise_completa(api_keys, telegram_config):
     atualizar_historico_local(api_keys)
     verificar_apostas_pendentes(api_keys['football'], telegram_config)
     print(f"\n--- 🦅 Iniciando ciclo de análise de novas oportunidades... ---")
-    
     data_hoje_str = str(date.today())
     diario_de_envio = carregar_json(ARQUIVO_ENTRADAS_ENVIADAS, {"data": data_hoje_str, "enviadas_ids": []})
     if diario_de_envio.get("data") != data_hoje_str:
         diario_de_envio = {"data": data_hoje_str, "enviadas_ids": []}
     ids_ja_enviados = set(diario_de_envio["enviadas_ids"])
     novas_oportunidades_encontradas = False
-    
     apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, [])
     ids_pendentes = {aposta['id_partida'] for aposta in apostas_pendentes}
-    
     jogos_principais = buscar_jogos_api_football(api_keys['football'])
     if not jogos_principais: print("Nenhum jogo novo encontrado."); return
-        
     dados_dia = carregar_json(ARQUIVO_JOGOS_DIA, {"data": "", "jogos": []})
     if dados_dia.get("data") != data_hoje_str or not dados_dia.get("jogos"):
         salvar_json({"data": str(date.today()), "jogos": jogos_principais}, ARQUIVO_JOGOS_DIA)
-        
     jogos_com_odds = buscar_odds_the_odds_api(api_keys['odds'])
     contexto = {}
     try:
         df_historico = pd.read_csv(ARQUIVO_HISTORICO_CORRIGIDO, low_memory=False)
         stats_i, stats_h, forma_r = calcular_estatisticas_historicas(df_historico.copy())
         contexto.update({"stats_individuais": stats_i, "stats_h2h": stats_h, "forma_recente": forma_r})
-
         print("  -> 🗺️  Carregando mapa de nomes (Master Team List)...")
         mapa_de_nomes = carregar_json(ARQUIVO_MASTER_LIST, {})
         if mapa_de_nomes:
@@ -204,98 +199,81 @@ def rodar_analise_completa(api_keys, telegram_config):
             print(f"  -> Mapa com {len(mapa_de_nomes)} times carregado com sucesso.")
         else:
             print("  -> ⚠️ AVISO: Arquivo master_team_list.json não encontrado ou vazio.")
-
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo histórico '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado."); return
-        
     print(f"\n--- 🔬 Analisando {len(jogos_principais)} jogos encontrados... ---")
     lista_de_funcoes = [
         analisar_favorito_forte_fora, analisar_valor_mandante_azarao, analisar_valor_visitante_azarao,
         analisar_empate_valorizado, analisar_forma_recente_casa, analisar_forma_recente_fora
     ]
-    
     for jogo in jogos_principais:
-        id_partida, time_casa, time_fora = jogo.get('id_partida'), jogo['home_team'], jogo['away_team']
-        if id_partida in ids_pendentes: continue
-        print(f"\n--------------------------------------------------\nAnalisando NOVO Jogo: {time_casa} vs {time_fora}")
-        
-        jogo['bookmakers'] = []
-        if jogos_com_odds:
-            melhor_match_odds, maior_pontuacao = None, 75
-            for jogo_odd in jogos_com_odds:
-                pontuacao = fuzz.token_set_ratio(f"{time_casa} {time_fora}", f"{jogo_odd['home_team']} {jogo_odd['away_team']}")
-                if pontuacao > maior_pontuacao: maior_pontuacao, melhor_match_odds = pontuacao, jogo_odd
-            if melhor_match_odds:
-                print(f"  -> Odds encontradas com {maior_pontuacao}% de confiança.")
-                jogo['bookmakers'] = melhor_match_odds.get('bookmakers', [])
-        
-        for func_estrategia in lista_de_funcoes:
-            resultado_offline = func_estrategia(jogo, contexto, debug=True)
-            
-            if isinstance(resultado_offline, str):
-                print(f"    - Estratégia '{func_estrategia.__name__}': {resultado_offline}")
-            
-            elif isinstance(resultado_offline, dict) and resultado_offline.get('type') == 'pre_aprovado':
-                print(f"  -> 🔬 Pré-Aprovado pela estratégia '{resultado_offline['nome_estrategia']}' (análise offline).")
-                
-                stats_casa = buscar_estatisticas_time(api_keys['football'], jogo['home_team_id'], jogo['league_id'])
-                stats_fora = buscar_estatisticas_time(api_keys['football'], jogo['away_team_id'], jogo['league_id'])
-
-                validado_online = False
-                motivo_online = "Critérios de validação online não atendidos."
-                
-                if stats_casa and stats_fora:
-                    forma_casa, forma_fora = stats_casa.get('forma', ''), stats_fora.get('forma', '')
-                    if resultado_offline['nome_estrategia'] == 'Empate Valorizado' and forma_casa.count('L') <= 1 and forma_fora.count('L') <= 1:
-                        validado_online = True
-                        motivo_online = f"Confirmado com forma recente estável (Casa: {forma_casa}, Fora: {forma_fora})."
-                
-                if not validado_online:
-                    print(f"  -> ❌ Reprovado na validação online.")
-                    continue
-
-                print(f"  -> ✅ APROVADO na validação online!")
-                
-                id_unico_aposta = f"{id_partida}-{func_estrategia.__name__}"
-                if id_unico_aposta in ids_ja_enviados:
-                    print(f"  -> Oportunidade repetida. Ignorando.")
-                    continue
-                
-                oportunidade = resultado_offline
-                odd = _encontrar_odd_especifica(jogo, oportunidade['mercado'])
-                motivo_final = motivo_online
-                
-                oportunidade_encontrada = False
-                mensagem = ""
-                fuso_horario_br = timezone(timedelta(hours=-3))
-                dt_objeto = datetime.fromtimestamp(jogo.get('timestamp', 0), tz=fuso_horario_br)
-                data_hora_formatada = dt_objeto.strftime('%d/%m/%Y às %H:%M')
-
-                if odd and ODD_MINIMA <= odd <= ODD_MAXIMA:
-                    oportunidade_encontrada = True
-                    mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA {oportunidade.get('emoji', '⚠️')}*\n\n*🗓️ DATA:* {data_hora_formatada}\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*📈 MERCADO:* {oportunidade['mercado']}\n*📊 ODD ENCONTRADA:* *{odd:.2f}*\n\n*🔍 Análise:* _{motivo_final}_"
-                elif not odd:
-                    oportunidade_encontrada = True
-                    mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA (SEM ODD) {oportunidade.get('emoji', '⚠️')}*\n\n*🗓️ DATA:* {data_hora_formatada}\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*📈 MERCADO SUGERIDO:* {oportunidade['mercado']}\n\n*🔍 Análise:* _{motivo_final}_\n\n_NOTA: Verifique a odd na sua casa de apostas e decida se a entrada tem valor._"
-                
-                if oportunidade_encontrada:
-                    novas_oportunidades_encontradas = True
-                    enviar_alerta_telegram(mensagem, telegram_config['token'], telegram_config['chat_id'])
-                    ids_ja_enviados.add(id_unico_aposta)
-                    diario_de_envio["enviadas_ids"] = list(ids_ja_enviados)
-                    salvar_json(diario_de_envio, ARQUIVO_ENTRADAS_ENVIADAS)
-                    nova_aposta = {'id_partida': id_partida, 'times': f"{time_casa} vs {time_fora}", 'mercado': oportunidade['mercado'], 'odd_entrada': odd, 'data_aposta': str(date.today())}
-                    apostas_pendentes.append(nova_aposta)
-                    salvar_json(apostas_pendentes, ARQUIVO_PENDENTES)
-                    print(f"  -> Oportunidade salva em '{ARQUIVO_PENDENTES}'.")
-                    break
-    
+        try:
+            id_partida, time_casa, time_fora = jogo.get('id_partida'), jogo['home_team'], jogo['away_team']
+            if id_partida in ids_pendentes: continue
+            print(f"\n--------------------------------------------------\nAnalisando NOVO Jogo: {time_casa} vs {time_fora}")
+            jogo['bookmakers'] = []
+            if jogos_com_odds:
+                melhor_match_odds, maior_pontuacao = None, 75
+                for jogo_odd in jogos_com_odds:
+                    pontuacao = fuzz.token_set_ratio(f"{time_casa} {time_fora}", f"{jogo_odd['home_team']} {jogo_odd['away_team']}")
+                    if pontuacao > maior_pontuacao: maior_pontuacao, melhor_match_odds = pontuacao, jogo_odd
+                if melhor_match_odds:
+                    print(f"  -> Odds encontradas com {maior_pontuacao}% de confiança.")
+                    jogo['bookmakers'] = melhor_match_odds.get('bookmakers', [])
+            for func_estrategia in lista_de_funcoes:
+                resultado_offline = func_estrategia(jogo, contexto, debug=True)
+                if isinstance(resultado_offline, str):
+                    print(f"    - Estratégia '{func_estrategia.__name__}': {resultado_offline}")
+                elif isinstance(resultado_offline, dict) and resultado_offline.get('type') == 'pre_aprovado':
+                    print(f"  -> 🔬 Pré-Aprovado pela estratégia '{resultado_offline['nome_estrategia']}' (análise offline).")
+                    stats_casa = buscar_estatisticas_time(api_keys['football'], jogo['home_team_id'], jogo['league_id'])
+                    stats_fora = buscar_estatisticas_time(api_keys['football'], jogo['away_team_id'], jogo['league_id'])
+                    validado_online = False
+                    motivo_online = "Critérios de validação online não atendidos."
+                    if stats_casa and stats_fora:
+                        forma_casa, forma_fora = stats_casa.get('forma', ''), stats_fora.get('forma', '')
+                        if resultado_offline['nome_estrategia'] == 'Empate Valorizado' and forma_casa.count('L') <= 1 and forma_fora.count('L') <= 1:
+                            validado_online = True
+                            motivo_online = f"Confirmado com forma recente estável (Casa: {forma_casa}, Fora: {forma_fora})."
+                    if not validado_online:
+                        print(f"  -> ❌ Reprovado na validação online."); continue
+                    print(f"  -> ✅ APROVADO na validação online!")
+                    id_unico_aposta = f"{id_partida}-{func_estrategia.__name__}"
+                    if id_unico_aposta in ids_ja_enviados:
+                        print(f"  -> Oportunidade repetida. Ignorando."); continue
+                    oportunidade, odd, motivo_final = resultado_offline, _encontrar_odd_especifica(jogo, resultado_offline['mercado']), motivo_online
+                    oportunidade_encontrada = False; mensagem = ""
+                    fuso_horario_br = timezone(timedelta(hours=-3))
+                    dt_objeto = datetime.fromtimestamp(jogo.get('timestamp', 0), tz=fuso_horario_br)
+                    data_hora_formatada = dt_objeto.strftime('%d/%m/%Y às %H:%M')
+                    if odd and ODD_MINIMA <= odd <= ODD_MAXIMA:
+                        oportunidade_encontrada = True
+                        mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA {oportunidade.get('emoji', '⚠️')}*\n\n*🗓️ DATA:* {data_hora_formatada}\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*📈 MERCADO:* {oportunidade['mercado']}\n*📊 ODD ENCONTRADA:* *{odd:.2f}*\n\n*🔍 Análise:* _{motivo_final}_"
+                    elif not odd:
+                        oportunidade_encontrada = True
+                        mensagem = f"*{oportunidade.get('emoji', '⚠️')} ENTRADA VALIDADA (SEM ODD) {oportunidade.get('emoji', '⚠️')}*\n\n*🗓️ DATA:* {data_hora_formatada}\n*⚽ JOGO:* {time_casa} vs {time_fora}\n*📈 MERCADO SUGERIDO:* {oportunidade['mercado']}\n\n*🔍 Análise:* _{motivo_final}_\n\n_NOTA: Verifique a odd na sua casa de apostas e decida se a entrada tem valor._"
+                    if oportunidade_encontrada:
+                        novas_oportunidades_encontradas = True
+                        enviar_alerta_telegram(mensagem, telegram_config['token'], telegram_config['chat_id'])
+                        ids_ja_enviados.add(id_unico_aposta)
+                        diario_de_envio["enviadas_ids"] = list(ids_ja_enviados)
+                        salvar_json(diario_de_envio, ARQUIVO_ENTRADAS_ENVIADAS)
+                        nova_aposta = {'id_partida': id_partida, 'times': f"{time_casa} vs {time_fora}", 'mercado': oportunidade['mercado'], 'odd_entrada': odd, 'data_aposta': str(date.today())}
+                        apostas_pendentes.append(nova_aposta)
+                        salvar_json(apostas_pendentes, ARQUIVO_PENDENTES)
+                        print(f"  -> Oportunidade salva em '{ARQUIVO_PENDENTES}'.")
+                        break
+        except AttributeError as e:
+            if "'list' object has no attribute 'get'" in str(e):
+                print(f"  -> ‼️ ERRO DE DADOS para o jogo {jogo.get('home_team')} vs {jogo.get('away_team')}. Pulando.")
+            else: print(f"  -> ‼️ ERRO INESPERADO (AttributeError) no jogo {jogo.get('home_team')} vs {jogo.get('away_team')}: {e}")
+        except Exception as e:
+            print(f"  -> ‼️ ERRO GERAL no jogo {jogo.get('home_team')} vs {jogo.get('away_team')}: {e}")
     if not novas_oportunidades_encontradas:
         num_pendentes = len(carregar_json(ARQUIVO_PENDENTES, []))
         mensagem_telegram = f"Nenhuma oportunidade *nova* encontrada nesta análise. {num_pendentes} apostas pendentes continuam em monitoramento."
         print(f"\n{mensagem_telegram}")
         enviar_alerta_telegram(mensagem_telegram, telegram_config['token'], telegram_config['chat_id'])
-    
     print("\n--- Ciclo de análise finalizado. ---")
 
 if __name__ == "__main__":
@@ -306,8 +284,7 @@ if __name__ == "__main__":
     TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
     if not API_KEY_FOOTBALL or not API_KEY_ODDS:
         print("="*60)
-        print("❌ ERRO CRÍTICO: Uma ou mais chaves de API não foram encontradas")
-        print("   nos Secrets do Replit. Verifique se os nomes estão corretos:")
+        print("❌ ERRO CRÍTICO: Chaves de API não encontradas nos Secrets.")
         print("   - API_KEY (para API-Football)")
         print("   - API_KEY_ODDS (para The Odds API, com dois 'D')")
         print("="*60)
