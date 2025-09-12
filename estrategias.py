@@ -14,7 +14,7 @@ def _encontrar_odd_especifica(jogo, mercado):
     if not bookmakers: return None
     
     for bookmaker in bookmakers:
-        # ### NOVA VERIFICAÇÃO DE SEGURANÇA ###
+        # ### VERIFICAÇÃO DE SEGURANÇA DEFINITIVA ###
         # Garante que o 'bookmaker' é um dicionário antes de tentar usar .get()
         if not isinstance(bookmaker, dict):
             continue # Pula para o próximo item da lista se o formato for inesperado
@@ -27,7 +27,6 @@ def _encontrar_odd_especifica(jogo, mercado):
     return None
 
 # --- ESTRATÉGIAS ---
-# Nenhuma das funções de estratégia abaixo precisa ser alterada.
 
 def analisar_confronto_de_opostos(jogo, contexto, debug=False):
     tabelas = contexto.get('tabelas_ligas', {})
