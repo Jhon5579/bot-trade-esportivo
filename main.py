@@ -1,4 +1,4 @@
-# main.py (Versão 2.7 Completa - Mais Robusto)
+# main.py (Versão 2.8 Completa - Modo Detetive de Odds)
 
 import requests
 import pandas as pd
@@ -8,11 +8,10 @@ from datetime import datetime, timezone, timedelta, date
 import os
 import csv
 
-# --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from estrategias import *
 from api_externa import (
-    buscar_jogos_api_football, buscar_odds_the_odds_api, 
-    verificar_resultado_api_football, buscar_estatisticas_time, 
+    buscar_jogos_api_football, buscar_odds_the_odds_api,
+    verificar_resultado_api_football, buscar_estatisticas_time,
     buscar_resultados_por_ids
 )
 
@@ -219,7 +218,15 @@ def rodar_analise_completa(api_keys, telegram_config):
                     if pontuacao > maior_pontuacao: maior_pontuacao, melhor_match_odds = pontuacao, jogo_odd
                 if melhor_match_odds:
                     print(f"  -> Odds encontradas com {maior_pontuacao}% de confiança.")
+
+                    # ### INÍCIO DO MODO DETETIVE ###
+                    print("\n--- 🕵️ DADOS DE ODDS RECEBIDOS (DEBUG) 🕵️ ---")
+                    print(json.dumps(melhor_match_odds, indent=2))
+                    print("-------------------------------------------\n")
+                    # ### FIM DO MODO DETETIVE ###
+
                     jogo['bookmakers'] = melhor_match_odds.get('bookmakers', [])
+            
             for func_estrategia in lista_de_funcoes:
                 resultado_offline = func_estrategia(jogo, contexto, debug=True)
                 if isinstance(resultado_offline, str):
@@ -266,7 +273,8 @@ def rodar_analise_completa(api_keys, telegram_config):
         except AttributeError as e:
             if "'list' object has no attribute 'get'" in str(e):
                 print(f"  -> ‼️ ERRO DE DADOS para o jogo {jogo.get('home_team')} vs {jogo.get('away_team')}. Pulando.")
-            else: print(f"  -> ‼️ ERRO INESPERADO (AttributeError) no jogo {jogo.get('home_team')} vs {jogo.get('away_team')}: {e}")
+            else:
+                print(f"  -> ‼️ ERRO INESPERADO (AttributeError) no jogo {jogo.get('home_team')} vs {jogo.get('away_team')}: {e}")
         except Exception as e:
             print(f"  -> ‼️ ERRO GERAL no jogo {jogo.get('home_team')} vs {jogo.get('away_team')}: {e}")
     if not novas_oportunidades_encontradas:
