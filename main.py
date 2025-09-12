@@ -1,4 +1,4 @@
-# main.py (Versão Final 2.9 - Completo e com Fluxo Reativo)
+# main.py (Versão 2.11 - Completo com Freio de Segurança)
 
 import requests
 import pandas as pd
@@ -8,11 +8,10 @@ from datetime import datetime, timezone, timedelta, date
 import os
 import csv
 
-# --- IMPORTAÇÃO DOS MÓDULOS DO PROJETO ---
 from estrategias import *
 from api_externa import (
-    buscar_jogos_api_football, buscar_odds_the_odds_api, 
-    verificar_resultado_api_football, buscar_estatisticas_time, 
+    buscar_jogos_api_football, buscar_odds_the_odds_api,
+    verificar_resultado_api_football, buscar_estatisticas_time,
     buscar_resultados_por_ids, buscar_tabela_rundown
 )
 
@@ -26,7 +25,20 @@ ARQUIVO_ENTRADAS_ENVIADAS = 'entradas_enviadas.json'
 ODD_MINIMA = 1.40
 ODD_MAXIMA = 2.00
 
-# --- FUNÇÕES DE SUPORTE E GERENCIAMENTO ---
+# ### FREIO DE SEGURANÇA: LISTA DE LIGAS PARA BUSCAR TABELA ###
+# Adicione ou remova os IDs da API-FOOTBALL das ligas que você quer que o bot busque a tabela.
+LIGAS_PARA_BUSCAR_TABELA = {
+    71,  # Brasileirão Série A
+    39,  # Premier League (Inglaterra)
+    140, # La Liga (Espanha)
+    135, # Serie A (Itália)
+    78,  # Bundesliga (Alemanha)
+    61,  # Ligue 1 (França)
+    2,   # Champions League
+    3,   # Europa League
+    88,  # Eredivisie (Holanda)
+    94,  # Primeira Liga (Portugal)
+}
 
 def enviar_alerta_telegram(mensagem, telegram_token, telegram_chat_id):
     if not telegram_token or not telegram_chat_id:
@@ -184,16 +196,19 @@ def rodar_analise_completa(api_keys, telegram_config):
     apostas_pendentes = carregar_json(ARQUIVO_PENDENTES, [])
     ids_pendentes = {aposta['id_partida'] for aposta in apostas_pendentes}
     
-    # ETAPA 1: BUSCAR JOGOS
     jogos_principais = buscar_jogos_api_football(api_keys['football'])
-    if not jogos_principais: print("Nenhum jogo novo encontrado."); return
+    if not jogos_principais:
+        print("Nenhum jogo novo encontrado."); return
         
-    # ETAPA 2: BUSCAR CONTEXTO SOB DEMANDA
     print("\n--- 📚 Buscando dados de contexto para os jogos do dia... ---")
     ligas_do_dia = {jogo['league_id'] for jogo in jogos_principais}
     print(f"  -> {len(ligas_do_dia)} ligas encontradas nos jogos de hoje.")
+    
     tabelas_das_ligas = {}
-    for league_id in ligas_do_dia:
+    ligas_para_consultar = ligas_do_dia.intersection(LIGAS_PARA_BUSCAR_TABELA)
+    print(f"  -> Filtrado para {len(ligas_para_consultar)} ligas de interesse para buscar tabela.")
+
+    for league_id in ligas_para_consultar:
         tabela = buscar_tabela_rundown(api_keys['rundown'], league_id)
         if tabela:
             tabelas_das_ligas[league_id] = tabela
@@ -213,6 +228,7 @@ def rodar_analise_completa(api_keys, telegram_config):
             print(f"  -> Mapa com {len(mapa_de_nomes)} times carregado com sucesso.")
         else:
             print("  -> ⚠️ AVISO: Arquivo master_team_list.json não encontrado ou vazio.")
+
     except FileNotFoundError:
         print(f"  -> ⚠️ AVISO: Arquivo histórico '{ARQUIVO_HISTORICO_CORRIGIDO}' não encontrado."); return
         
