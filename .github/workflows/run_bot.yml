@@ -1,4 +1,4 @@
-# .github/workflows/rodar-analise.yml (Versão com Cache Persistente)
+# .github/workflows/rodar-analise.yml
 
 name: Análise de Jogos do Falcão
 
@@ -16,16 +16,10 @@ jobs:
       - name: Baixando o código do repositório
         uses: actions/checkout@v4
 
-      # --- ETAPA DE CACHE (A MUDANÇA PRINCIPAL) ---
-      # 1. Tenta restaurar a pasta de cache da execução anterior
-      - name: Restaurando Cache
-        uses: actions/cache@v3
-        with:
-          path: . # O diretório a ser salvo/restaurado (a pasta principal)
-          # A chave de cache é baseada no dia. Um novo cache será criado a cada dia.
-          key: bot-cache-${{ github.run_id }}
-          restore-keys: |
-            bot-cache-
+      # ### PASSO NOVO ###
+      # Garante que começamos do zero, se necessário.
+      - name: Limpar Cache Antigo (para depuração)
+        run: rm -rf cache
 
       - name: Configurando o ambiente Python
         uses: actions/setup-python@v4
