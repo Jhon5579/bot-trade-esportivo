@@ -1,38 +1,45 @@
-# .github/workflows/analise_jogos.yml
+# .github/workflows/rodar-analise.yml
 
-name: Analise de Jogos do Falcao
+# Nome da automação, que aparecerá na aba "Actions" do seu GitHub
+name: Análise de Jogos do Falcão
 
 on:
-  schedule:
-    # Roda a cada 30 min, das 11:00 às 23:59 UTC (08:00 às 20:59 BRT)
-    - cron: '*/30 11-23 * * *'
-    # Roda a cada 30 min, das 00:00 às 02:59 UTC (21:00 às 23:59 BRT)
-    - cron: '*/30 0-2 * * *'
-  
-  # Permite que você rode este workflow manualmente pela aba Actions do GitHub
+  # Permite que você rode a automação manualmente a qualquer momento pelo site do GitHub
   workflow_dispatch:
 
-jobs:
-  rodar-analise:
-    runs-on: ubuntu-latest
-    steps:
-      - name: 1. Baixando o código do repositório
-        uses: actions/checkout@v3
+  schedule:
+    # Roda a automação em um cronograma. A sintaxe é CRON.
+    # IMPORTANTE: O horário é em UTC (3 horas a mais que o horário de Brasília).
+    # Esta configuração roda o bot a cada hora, entre as 8h da manhã e a meia-noite (seu horário).
+    - cron: '0 11-23 * * *'  # Das 11h às 23h UTC (8h às 20h BRT)
+    - cron: '0 0-3 * * *'     # Das 0h às 3h UTC do dia seguinte (21h à 00h BRT)
 
-      - name: 2. Configurando o ambiente Python
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Passo 1: Baixa o código do seu repositório para a máquina virtual do GitHub
+      - name: Baixando o código do repositório
+        uses: actions/checkout@v4
+
+      # Passo 2: Configura o ambiente Python
+      - name: Configurando o ambiente Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # Ou a versão que você usa
+          python-version: '3.10' # Usaremos uma versão moderna do Python
 
-      - name: 3. Instalando as dependências
+      # Passo 3: Instala todas as dependências listadas no requirements.txt
+      - name: Instalando as dependências
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 4. Executando o Robô Falcão
+      # Passo 4: Executa o Robô Falcão
+      - name: Executando o Robô Falcão
+        # Este é o passo crucial que entrega os segredos para o seu script
         env:
-          # É ESSENCIAL que você configure estes segredos no seu repositório
-          API_KEY_FOOTBALL: ${{ secrets.API_KEY_FOOTBALL }}
+          API_KEY: ${{ secrets.API_KEY }}
           API_KEY_ODDS: ${{ secrets.API_KEY_ODDS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
