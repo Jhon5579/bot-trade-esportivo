@@ -1,4 +1,4 @@
-# main.py (Versão 2.12 Completa - Com Caixa-Preta de Erros)
+# main.py (Versão de Teste - Sem The Rundown)
 
 import requests
 import pandas as pd
@@ -13,7 +13,7 @@ from estrategias import *
 from api_externa import (
     buscar_jogos_api_football, buscar_odds_the_odds_api,
     verificar_resultado_api_football, buscar_estatisticas_time,
-    buscar_resultados_por_ids, buscar_tabela_rundown
+    buscar_resultados_por_ids
 )
 
 # --- ARQUIVOS E CONSTANTES ---
@@ -25,11 +25,6 @@ ARQUIVO_JOGOS_DIA = 'jogos_a_acompanhar.json'
 ARQUIVO_ENTRADAS_ENVIADAS = 'entradas_enviadas.json'
 ODD_MINIMA = 1.40
 ODD_MAXIMA = 2.00
-
-# ### FREIO DE SEGURANÇA: LISTA DE LIGAS PARA BUSCAR TABELA ###
-LIGAS_PARA_BUSCAR_TABELA = {
-    71, 39, 140, 135, 78, 61, 2, 3, 88, 94,
-}
 
 def enviar_alerta_telegram(mensagem, telegram_token, telegram_chat_id):
     if not telegram_token or not telegram_chat_id:
@@ -187,19 +182,9 @@ def rodar_analise_completa(api_keys, telegram_config):
     
     jogos_principais = buscar_jogos_api_football(api_keys['football'])
     if not jogos_principais: print("Nenhum jogo novo encontrado."); return
-        
-    print("\n--- 📚 Buscando dados de contexto para os jogos do dia... ---")
-    ligas_do_dia = {jogo['league_id'] for jogo in jogos_principais}
-    print(f"  -> {len(ligas_do_dia)} ligas encontradas nos jogos de hoje.")
-    tabelas_das_ligas = {}
-    ligas_para_consultar = ligas_do_dia.intersection(LIGAS_PARA_BUSCAR_TABELA)
-    print(f"  -> Filtrado para {len(ligas_para_consultar)} ligas de interesse para buscar tabela.")
-    for league_id in ligas_para_consultar:
-        tabela = buscar_tabela_rundown(api_keys['rundown'], league_id)
-        if tabela: tabelas_das_ligas[league_id] = tabela
-            
+    
     jogos_com_odds = buscar_odds_the_odds_api(api_keys['odds'])
-    contexto = {'tabelas_ligas': tabelas_das_ligas}
+    contexto = {}
     try:
         df_historico = pd.read_csv(ARQUIVO_HISTORICO_CORRIGIDO, low_memory=False)
         stats_i, stats_h, forma_r = calcular_estatisticas_historicas(df_historico.copy())
@@ -216,7 +201,6 @@ def rodar_analise_completa(api_keys, telegram_config):
         
     print(f"\n--- 🔬 Analisando {len(jogos_principais)} jogos encontrados... ---")
     lista_de_funcoes = [
-        analisar_confronto_de_opostos,
         analisar_favorito_forte_fora, analisar_valor_mandante_azarao, analisar_valor_visitante_azarao,
         analisar_empate_valorizado, analisar_forma_recente_casa, analisar_forma_recente_fora
     ]
@@ -315,21 +299,18 @@ if __name__ == "__main__":
     print("--- Carregando chaves da API a partir dos Secrets... ---")
     API_KEY_FOOTBALL = os.getenv('API_KEY')
     API_KEY_ODDS = os.getenv('API_KEY_ODDS')
-    API_KEY_RUNDOWN = os.getenv('API_KEY_RUNDOWN')
     TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
     TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-    if not API_KEY_FOOTBALL or not API_KEY_ODDS or not API_KEY_RUNDOWN:
+    if not API_KEY_FOOTBALL or not API_KEY_ODDS:
         print("="*60)
-        print("❌ ERRO CRÍTICO: Uma ou mais chaves de API não foram encontradas nos Secrets.")
-        print("   Verifique os nomes: 'API_KEY', 'API_KEY_ODDS', 'API_KEY_RUNDOWN'")
+        print("❌ ERRO CRÍTICO: Chaves 'API_KEY' ou 'API_KEY_ODDS' não encontradas nos Secrets.")
         print("="*60)
     else:
         print("✅ Chaves da API carregadas com sucesso.")
         api_keys = {
             'football': API_KEY_FOOTBALL,
-            'odds': API_KEY_ODDS,
-            'rundown': API_KEY_RUNDOWN
+            'odds': API_KEY_ODDS
         }
         telegram_config = {
             'token': TELEGRAM_TOKEN,
